@@ -19,7 +19,7 @@
   --purple: #6f42c1;
   --pink: #eb5175;
   --red: #FD5D93;
-  --orange: #f06161;
+  --orange: #ff7c35;
   --yellow: #ffc107;
   --green: #00F2C3;
   --teal: #20c997;
@@ -27,7 +27,7 @@
   --white: #fff;
   --gray: #6c757d;
   --gray-dark: #343a40;
-  --primary: #f06161;
+  --primary: #ff7c35;
   --secondary: #6c757d;
   --success: #00F2C3;
   --info: #17a2b8;
@@ -162,7 +162,7 @@ sup {
 }
 
 a {
-  color: #f06161;
+  color: #ff7c35;
   text-decoration: none;
   background-color: transparent;
 }
@@ -2772,8 +2772,8 @@ fieldset:disabled a.btn {
 
 .btn-primary {
   color: #fff;
-  background-color: #f06161;
-  border-color: #f06161;
+  background-color: #ff7c35;
+  border-color: #ff7c35;
 }
 
 .btn-primary:hover {
@@ -2788,8 +2788,8 @@ fieldset:disabled a.btn {
 
 .btn-primary.disabled, .btn-primary:disabled {
   color: #fff;
-  background-color: #f06161;
-  border-color: #f06161;
+  background-color: #ff7c35;
+  border-color: #ff7c35;
 }
 
 .btn-primary:not(:disabled):not(.disabled):active, .btn-primary:not(:disabled):not(.disabled).active,
@@ -3043,14 +3043,14 @@ fieldset:disabled a.btn {
 }
 
 .btn-outline-primary {
-  color: #f06161;
-  border-color: #f06161;
+  color: #ff7c35;
+  border-color: #ff7c35;
 }
 
 .btn-outline-primary:hover {
   color: #fff;
-  background-color: #f06161;
-  border-color: #f06161;
+  background-color: #ff7c35;
+  border-color: #ff7c35;
 }
 
 .btn-outline-primary:focus, .btn-outline-primary.focus {
@@ -3058,15 +3058,15 @@ fieldset:disabled a.btn {
 }
 
 .btn-outline-primary.disabled, .btn-outline-primary:disabled {
-  color: #f06161;
+  color: #ff7c35;
   background-color: transparent;
 }
 
 .btn-outline-primary:not(:disabled):not(.disabled):active, .btn-outline-primary:not(:disabled):not(.disabled).active,
 .show > .btn-outline-primary.dropdown-toggle {
   color: #fff;
-  background-color: #f06161;
-  border-color: #f06161;
+  background-color: #ff7c35;
+  border-color: #ff7c35;
 }
 
 .btn-outline-primary:not(:disabled):not(.disabled):active:focus, .btn-outline-primary:not(:disabled):not(.disabled).active:focus,
@@ -3300,7 +3300,7 @@ fieldset:disabled a.btn {
 
 .btn-link {
   font-weight: 400;
-  color: #f06161;
+  color: #ff7c35;
   text-decoration: none;
 }
 
