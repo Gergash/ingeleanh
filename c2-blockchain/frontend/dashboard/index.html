@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>C2 Blockchain-Blindado — Dashboard</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 1rem; background: #0f1419; color: #e6edf3; }
+    h1 { font-size: 1.2rem; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    section { background: #161b22; padding: 1rem; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 0.35rem; border-bottom: 1px solid #30363d; }
+    .chain { margin-top: 1rem; padding: 0.75rem; background: #21262d; border-radius: 6px; }
+    button { background: #238636; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>C2 Blockchain-Blindado — Panel de estado</h1>
+  <button onclick="refresh()">Actualizar</button>
+  <div class="grid">
+    <section><h2>Agentes</h2><div id="agents"></div></section>
+    <section><h2>Tareas</h2><div id="tasks">Use API POST /tasks</div></section>
+    <section><h2>Eventos IoT</h2><div id="events"></div></section>
+  </div>
+  <div class="chain" id="chain"></div>
+  <script>
+    const token = localStorage.getItem('c2_jwt') || prompt('JWT token (login primero):');
+    if (token) localStorage.setItem('c2_jwt', token);
+    async function api(path) {
+      const r = await fetch('/api/v1' + path, { headers: { Authorization: 'Bearer ' + token } });
+      return r.json();
+    }
+    async function refresh() {
+      const agents = await api('/agents');
+      document.getElementById('agents').innerHTML = '<table><tr><th>ID</th><th>OS</th><th>Status</th></tr>' +
+        (agents.agents||[]).map(a => `<tr><td>${a.agent_id}</td><td>${a.os}</td><td>${a.status}</td></tr>`).join('') + '</table>';
+      const events = await api('/events?limit=20');
+      document.getElementById('events').innerHTML = '<table><tr><th>Tipo</th><th>Resumen</th></tr>' +
+        (events.events||[]).map(e => `<tr><td>${e.event_type||''}</td><td>${e.payload_summary||JSON.stringify(e)}</td></tr>`).join('') + '</table>';
+      const chain = await api('/chain/status');
+      document.getElementById('chain').textContent = 'Chain: v' + chain.config_version + ' | Block: ' + chain.last_indexed_block + ' | Amoy ' + chain.chain_id;
+    }
+    refresh();
+  </script>
+</body>
+</html>

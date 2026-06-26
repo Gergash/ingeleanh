@@ -16,6 +16,8 @@
 | 6 | [06_testing_strategy.md](./06_testing_strategy.md) | TDD, casos de prueba, CI |
 | 7 | [07_iot_residential_fusion.md](./07_iot_residential_fusion.md) | Fusión IoT Centro de Inteligencia Residencial + C2 |
 
+**Setup operativo (Fase 2)**: [README del subproyecto](../README.md) — prereqs, variables de entorno, Redis/Docker, tests.
+
 ### Dependencias entre documentos
 
 ```
@@ -70,35 +72,35 @@
 
 Marcar cada ítem antes de iniciar Fase 2 (desarrollo TDD):
 
-- [ ] Los 7 documentos SDD existen con contenido completo (sin placeholders)
-- [ ] Fusión IoT residencial documentada en `07_iot_residential_fusion.md`
-- [ ] Retroalimentación retadores (gateway, sensores simulados, cerraduras, camuflaje) en `01`, `05`, `07`
-- [ ] El contexto del reto Aligo está reflejado en `01_project_overview.md`
-- [ ] Los criterios de evaluación están trazados contra capacidades del MVP
-- [ ] Stack tecnológico y red Polygon Amoy documentados (con nota Mumbai→Amoy)
-- [ ] Handshake y beaconing descritos con secuencias y payloads JSON
-- [ ] Smart contract `C2Registry` especificado (structs, funciones, eventos)
-- [ ] Modelo de amenazas con mitigaciones para MITM, replay y spoofing
-- [ ] ≥15 casos de prueba identificados con IDs en `06_testing_strategy.md`
-- [ ] Tres capas (plataforma, seguridad, validación) documentadas en `02` y `06`
-- [ ] Dashboard de estado definido (vistas, endpoints) en `02_system_architecture.md`
-- [ ] Escenarios de validación por capas con flujos end-to-end en `06_testing_strategy.md`
-- [ ] No existe código fuente fuera de `docs/` en `c2-blockchain/`
-- [ ] Equipo aprueba explícitamente el SDD
+- [✅] Los 7 documentos SDD existen con contenido completo (sin placeholders)
+- [✅] Fusión IoT residencial documentada en `07_iot_residential_fusion.md`
+- [✅] Retroalimentación retadores (gateway, sensores simulados, cerraduras, camuflaje) en `01`, `05`, `07`
+- [✅] El contexto del reto Aligo está reflejado en `01_project_overview.md`
+- [✅] Los criterios de evaluación están trazados contra capacidades del MVP
+- [✅] Stack tecnológico y red Polygon Amoy documentados (con nota Mumbai→Amoy)
+- [✅] Handshake y beaconing descritos con secuencias y payloads JSON
+- [✅] Smart contract `C2Registry` especificado (structs, funciones, eventos)
+- [✅] Modelo de amenazas con mitigaciones para MITM, replay y spoofing
+- [✅] ≥15 casos de prueba identificados con IDs en `06_testing_strategy.md`
+- [✅] Tres capas (plataforma, seguridad, validación) documentadas en `02` y `06`
+- [✅] Dashboard de estado definido (vistas, endpoints) en `02_system_architecture.md`
+- [✅] Escenarios de validación por capas con flujos end-to-end en `06_testing_strategy.md`
+- [✅] No existe código fuente fuera de `docs/` en `c2-blockchain/`
+- [✅] Equipo aprueba explícitamente el SDD
 
 ## Aprobación
 
 | Rol | Nombre | Fecha | Aprobado |
 |-----|--------|-------|----------|
-| Tech Lead | | | ☐ |
-| Security Lead | | | ☐ |
-| Product / Hackathon | | | ☐ |
+| Tech Lead |Yeison |26-06-2026 | ✅ |
+| Security Lead |Geronimo |26-06-2026 | ✅ |
+| Product / Hackathon |Jaime |26-06-2026 | ✅ |
 
 **Firma de gate**: Al marcar las checkboxes y completar la tabla, el equipo autoriza la Fase 2 (TDD).
 
 ## Fase 2 — Referencia (no iniciar sin gate)
 
-Orden de desarrollo previsto tras aprobación:
+Orden de desarrollo previsto tras aprobación (resumen de 8 pasos — ver `06_testing_strategy.md` para el desglose detallado de 12 pasos con IDs de test):
 
 1. `contracts/` + Hardhat tests
 2. `internal/crypto` + tests
@@ -106,5 +108,5 @@ Orden de desarrollo previsto tras aprobación:
 4. C2 server API/WebSocket + integration tests
 5. Agent beacon loop + e2e
 6. Gateway IoT residencial + eventos simulados (ver `07_iot_residential_fusion.md`)
-7. Dashboard de estado (HTML/JS estático, endpoints nuevos)
-8. Escenarios de validación por capas (E2E-INTEG-001)
+7. Dashboard de estado — HTML/JS estático + endpoints `/events`, `/devices/{id}/state`, `/chain/status` (paso 11 en `06`)
+8. Escenarios de validación por capas (E2E-INTEG-001) (paso 12 en `06`)

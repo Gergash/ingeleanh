@@ -209,6 +209,8 @@ Estos criterios convierten el documento del reto en verificaciones concretas. El
 | API-004 | Integration | POST /tasks crea pending | JWT válido | task status pending + Redis LIST |
 | API-005 | Integration | task_result completa | beacon + result | task status completed |
 | API-006 | Integration | Rate limit handshake | 11 req / min IP | 429 RATE_LIMITED |
+| API-007 | Integration | GET /events lista iot_events | audit_log con action=iot_event | array paginado, event_type correcto |
+| API-008 | Integration | GET /events?gateway_id filtra | dos gateways en audit_log | solo eventos del gateway solicitado |
 
 ### Contract — `C2Registry` (Hardhat)
 
@@ -265,7 +267,7 @@ Estos criterios convierten el documento del reto en verificaciones concretas. El
 | EXEC-002 | Unit | shell Windows argv | comando cmd-compatible |
 | EXEC-003 | Unit | msf_module opcional | bridge invoca módulo; resultado por canal C2 propio |
 
-**Total casos documentados: 39** (≥15 requerido) + 4 escenarios de validación por capas
+**Total casos documentados: 41** (≥15 requerido) + 4 escenarios de validación por capas
 
 ---
 
@@ -315,6 +317,8 @@ Triggers: PR a `main`, push a `ingeleanh/c2-blockchain/`
 
 ## Orden de implementación TDD (Fase 2)
 
+> **Nota de alineación**: Este orden detallado (12 pasos) corresponde a los 8 pasos del README `docs/sdd/README.md` Fase 2. El paso 7 del README ("Dashboard") se descompone aquí en los pasos 10–11; el paso 8 del README ("Escenarios de validación") corresponde al paso 12.
+
 | Orden | Módulo | Tests primero |
 |-------|--------|---------------|
 | 1 | `contracts/C2Registry.sol` | SC-001 … SC-006 |
@@ -327,7 +331,8 @@ Triggers: PR a `main`, push a `ingeleanh/c2-blockchain/`
 | 8 | Gateway IoT | IOT-001 … IOT-005, E2E-003 |
 | 9 | `internal/executor` | EXEC-001 … EXEC-003, E2E-004 |
 | 10 | Simuladores IoT + camuflaje | IOT-006, IOT-007, CAMO-001 … CAMO-003 |
-| 11 | Flujo completo 3 capas | E2E-INTEG-001, DEMO-010, DEMO-011 |
+| 11 | Dashboard HTML/JS estático + endpoints dashboard | API-007, API-008, DEMO-010 |
+| 12 | Flujo completo 3 capas | E2E-INTEG-001, DEMO-011 |
 
 ---
 

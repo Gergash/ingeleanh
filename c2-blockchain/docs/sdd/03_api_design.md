@@ -465,7 +465,7 @@ Endpoints consumidos por el panel de estado (dashboard HTML/JS estático servido
 
 ### `GET /api/v1/events`
 
-Lista eventos IoT recientes (paginados).
+Lista eventos IoT recientes (paginados). **Persistencia**: lectura desde `audit_log` (actions `iot_event`, `iot_telemetry`, `iot_command_result`) — ver [04_data_models.md](./04_data_models.md#endpoint-events--implementación-vía-audit_log).
 
 | Header | Requerido | Valor |
 |--------|-----------|-------|

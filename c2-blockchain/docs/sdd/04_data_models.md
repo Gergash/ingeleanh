@@ -133,6 +133,28 @@ Base de datos: `c2.db` (path configurable vía `C2_DB_PATH`).
 
 **Índices**: `idx_audit_timestamp`, `idx_audit_actor`
 
+#### Valores de `action` para eventos IoT
+
+La columna `action` en `audit_log` distingue eventos IoT de auditoría genérica. Los valores usados por `GET /api/v1/events` son:
+
+| `action` | Generado por | Descripción |
+|----------|-------------|-------------|
+| `iot_event` | Gateway tras recibir sensor trigger | Evento de dispositivo (movimiento, apertura) |
+| `iot_telemetry` | Gateway tras lectura periódica | Medición de medidor o sensor de lectura continua |
+| `iot_command_result` | Server tras completar `iot_command` | Resultado de unlock, lock o status cerradura |
+
+El campo `metadata_json` almacena los detalles del evento en formato libre:
+
+```json
+{
+  "device_id": "sensor-motion-01",
+  "device_type": "motion_sensor",
+  "zone": "entrada",
+  "payload_summary": "motion detected zone-1",
+  "gateway_id": "gw-uuid-01"
+}
+```
+
 ### Tabla `chain_config_cache`
 
 | Columna | Tipo | Constraints | Descripción |
@@ -315,6 +337,31 @@ Acciones soportadas por `device_type` (vía `iot_command`):
 
 ---
 
+## Endpoint `/events` — implementación vía `audit_log`
+
+`GET /api/v1/events` no tiene tabla dedicada. Lee directamente desde `audit_log` filtrando por las actions IoT.
+
+### Query base
+
+```sql
+SELECT
+  CAST(id AS TEXT)         AS id,
+  actor                    AS actor,         -- 'agent:{agent_id}'
+  action                   AS event_type,
+  json_extract(metadata_json, '$.device_id')       AS device_id,
+  json_extract(metadata_json, '$.payload_summary') AS payload_summary,
+  timestamp                AS created_at
+FROM audit_log
+WHERE action IN ('iot_event', 'iot_telemetry', 'iot_command_result')
+  [AND json_extract(metadata_json, '$.gateway_id') = :gateway_id]  -- filtro opcional
+ORDER BY timestamp DESC
+LIMIT :limit OFFSET :offset;
+```
+
+El campo `agent_id` del response se extrae del actor (`REPLACE(actor, 'agent:', '')`). El `gateway_id` filter busca en `metadata_json` porque `audit_log` no tiene FK directa a `agents.gateway_id`; guardarlo ahí en la inserción es parte del contrato de escritura del server.
+
+> **Nota de diseño**: Para el MVP con carga de lab esta consulta es suficiente. Si en Fase 3 el volumen de eventos supera 100k filas, evaluar una vista materializada o tabla `iot_events` dedicada con índice en `(gateway_id, timestamp DESC)`.
+
 ## Mapeo API ↔ Persistencia
 
 | Operación API | SQLite | Redis |
@@ -324,6 +371,8 @@ Acciones soportadas por `device_type` (vía `iot_command`):
 | POST /tasks | INSERT `tasks` | RPUSH `beacon:pending`, PUBLISH `tasks:new` |
 | task_result | UPDATE `tasks` | — |
 | ChainIndexer event | UPSERT `chain_config_cache` | PUBLISH `chain:config:updated` |
+| GET /events | SELECT `audit_log` WHERE action IN (iot_*) | — |
+| GET /devices/{id}/state | SELECT `iot_devices.lock_state` | `iot:lock:{device_id}` (cache) |
 
 ---
 

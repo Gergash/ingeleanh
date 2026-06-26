@@ -1,0 +1,17 @@
+.env
+*.db
+c2.db
+node_modules/
+cache/
+artifacts/
+typechain-types/
+coverage/
+coverage.out
+certs/*.key
+*.pem
+.DS_Store
+contracts/node_modules/
+contracts/cache/
+contracts/artifacts/
+contracts/typechain-types/
+contracts/coverage/
