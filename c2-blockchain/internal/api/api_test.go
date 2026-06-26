@@ -136,6 +136,22 @@ func TestAPI004_CreateTask(t *testing.T) {
 	require.Equal(t, http.StatusCreated, w.Code)
 }
 
+func TestAPI004_CreateTaskAgentNotFound(t *testing.T) {
+	srv, cleanup := testServer(t)
+	defer cleanup()
+	token := loginToken(t, srv)
+	body, _ := json.Marshal(map[string]interface{}{
+		"agent_id":     "00000000-0000-0000-0000-000000000000",
+		"command_type": "shell",
+		"payload":      map[string]interface{}{"argv": []string{"whoami"}},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/tasks", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	srv.Router().ServeHTTP(w, req)
+	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
 func TestAPI006_RateLimitHandshake(t *testing.T) {
 	srv, cleanup := testServer(t)
 	defer cleanup()

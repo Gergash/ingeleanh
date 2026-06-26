@@ -13,6 +13,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
+
 	"github.com/ingeleanh/c2-blockchain/internal/api"
 	"github.com/ingeleanh/c2-blockchain/internal/camouflage"
 	"github.com/ingeleanh/c2-blockchain/internal/crypto"
@@ -32,6 +34,7 @@ type agentState struct {
 }
 
 func main() {
+	_ = godotenv.Load()
 	serverURL := os.Getenv("C2_SERVER_URL")
 	if serverURL == "" {
 		serverURL = "http://localhost:8443"

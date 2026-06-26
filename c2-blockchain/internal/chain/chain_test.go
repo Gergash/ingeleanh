@@ -25,3 +25,14 @@ func TestCHAIN002_GetConfigFromCache(t *testing.T) {
 	require.Equal(t, uint64(2), cfg.Version)
 	require.Equal(t, uint32(60), cfg.BeaconIntervalSec)
 }
+
+func TestParseEndpointHash_MatchesDeploy(t *testing.T) {
+	// Same as ethers.sha256(utf8("https://localhost:8443")) in deploy.js
+	require.Equal(t, "0x8d25ae631d8858ff58e46467e730b22e5bf728f96853c59383aaf3f1b5cb1b3e",
+		ParseEndpointHash("https://localhost:8443"))
+}
+
+func TestGetConfigSelector(t *testing.T) {
+	// ABI selector for getConfig() — must not use getValue() (0x20965255)
+	require.Equal(t, "c3f909d4", getConfigSelectorHex())
+}

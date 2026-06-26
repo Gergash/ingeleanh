@@ -46,7 +46,7 @@ cp .env.example .env
 
 > **Never commit `.env`** — it contains secrets.
 >
-> El server y el agente **no cargan `.env` automáticamente**. Exporta variables antes de `go run` o usa `set -a && source .env && set +a` (bash).
+> El server y el agente cargan `.env` del directorio de trabajo al arrancar (`godotenv`).
 
 ## Redis via Docker (dev)
 
@@ -274,9 +274,36 @@ c2-blockchain/
 └── frontend/           # Dashboard HTML/JS (static, served by server)
 ```
 
+---
+
+## Fase 3 — Demo y entrega (Hackathon)
+
+**Estado lab:** contrato desplegado en Amoy, E2E whoami verificado, chain status v1.
+
+| Recurso | Enlace |
+|---------|--------|
+| Contrato `C2Registry` | `0x629238eD79c23267fe502AAd81E5AEfee3908750` |
+| Polygonscan Amoy | https://amoy.polygonscan.com/address/0x629238eD79c23267fe502AAd81E5AEfee3908750 |
+| Guion demo en vivo | [docs/demo/GUION_DEMO_VIVO.md](./docs/demo/GUION_DEMO_VIVO.md) |
+| Guion video 3–7 min | [docs/demo/GUION_VIDEO.md](./docs/demo/GUION_VIDEO.md) |
+| Checklist entregables | [docs/demo/CHECKLIST_ENTREGABLES.md](./docs/demo/CHECKLIST_ENTREGABLES.md) |
+
+**Antes de grabar o presentar:**
+
+```bash
+docker start c2-redis
+cd ingeleanh/c2-blockchain
+go run ./cmd/server    # Terminal A
+go run ./cmd/agent     # Terminal B — una sola instancia
+```
+
+IoT stretch (gateway + unlock): `C2_IOT_GATEWAY=true go run ./cmd/agent`
+
+---
+
 ## References
 
-- [SDD documentation](./docs/sdd/README.md)
+- [Demo Fase 3](./docs/demo/README.md)
 - [API design](./docs/sdd/03_api_design.md)
 - [Data models](./docs/sdd/04_data_models.md)
 - [Testing strategy](./docs/sdd/06_testing_strategy.md)

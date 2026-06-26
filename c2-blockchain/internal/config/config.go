@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"strconv"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -21,6 +23,7 @@ type Config struct {
 }
 
 func Load() Config {
+	_ = godotenv.Load()
 	insecure := os.Getenv("C2_INSECURE") == "true"
 	port := os.Getenv("C2_PORT")
 	if port == "" {

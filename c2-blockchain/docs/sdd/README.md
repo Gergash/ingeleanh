@@ -18,6 +18,8 @@
 
 **Setup operativo (Fase 2)**: [README del subproyecto](../README.md) — prereqs, variables de entorno, Redis/Docker, tests.
 
+**Demo y video (Fase 3)**: [docs/demo/README.md](../demo/README.md) — guion en vivo, video 3–7 min, checklist entregables.
+
 ### Dependencias entre documentos
 
 ```

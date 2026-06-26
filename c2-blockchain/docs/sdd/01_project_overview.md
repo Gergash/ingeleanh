@@ -193,8 +193,8 @@ Este sistema está diseñado **únicamente** para:
 | Fase | Entregable | Estado |
 |------|------------|--------|
 | **Fase 1 — SDD** | 7 documentos Markdown en `docs/sdd/` alineados al reto Aligo + README de setup | Aprobado (gate cerrado) |
-| **Fase 2 — TDD** | Código + tests (Red → Verde → Refactor) | Listo para iniciar |
-| **Fase 3 — Demo** | Contrato en Amoy + server + agent en lab VM + video 3-7 min + demo en vivo | Pendiente |
+| **Fase 2 — TDD** | Código + tests (Red → Verde → Refactor) | Completado (E2E whoami + Amoy) |
+| **Fase 3 — Demo** | Contrato en Amoy + server + agent en lab VM + video 3-7 min + demo en vivo | En curso — ver `docs/demo/` |
 
 ## Glosario
 

@@ -375,22 +375,38 @@ func (s *Server) handleCreateTask(w http.ResponseWriter, r *http.Request) {
 		CommandType string                 `json:"command_type"`
 		Payload     map[string]interface{} `json:"payload"`
 	}
-	json.NewDecoder(r.Body).Decode(&body)
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "INVALID_BODY")
+		return
+	}
+	agentID := strings.TrimSpace(body.AgentID)
+	commandType := strings.TrimSpace(body.CommandType)
+	if agentID == "" || commandType == "" {
+		writeError(w, http.StatusBadRequest, "INVALID_COMMAND")
+		return
+	}
+	if _, err := s.db.GetAgent(r.Context(), agentID); err != nil {
+		writeError(w, http.StatusNotFound, "AGENT_NOT_FOUND")
+		return
+	}
 	taskID := uuid.New().String()
 	payloadJSON, _ := json.Marshal(body.Payload)
 	task := store.Task{
 		ID:          taskID,
-		AgentID:     body.AgentID,
-		CommandType: body.CommandType,
+		AgentID:     agentID,
+		CommandType: commandType,
 		PayloadJSON: string(payloadJSON),
 		Status:      "pending",
 		CreatedBy:   "operator",
 		CreatedAt:   time.Now(),
 	}
-	s.db.CreateTask(r.Context(), task)
-	s.redis.PushTask(r.Context(), body.AgentID, map[string]interface{}{
+	if err := s.db.CreateTask(r.Context(), task); err != nil {
+		writeError(w, http.StatusInternalServerError, "TASK_CREATE_FAILED")
+		return
+	}
+	s.redis.PushTask(r.Context(), agentID, map[string]interface{}{
 		"task_id":      taskID,
-		"command_type": body.CommandType,
+		"command_type": commandType,
 		"payload":      body.Payload,
 	})
 	writeJSON(w, http.StatusCreated, map[string]string{"task_id": taskID, "status": "pending"})
@@ -450,6 +466,19 @@ func (s *Server) handleDeviceState(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleChainStatus(w http.ResponseWriter, r *http.Request) {
+	if s.chain == nil {
+		writeJSON(w, http.StatusOK, map[string]interface{}{
+			"config_version": 0,
+			"network":        "polygon-amoy",
+		})
+		return
+	}
+	if _, err := s.chain.GetConfig(r.Context()); err != nil {
+		st := s.chain.Status()
+		st["rpc_error"] = err.Error()
+		writeJSON(w, http.StatusOK, st)
+		return
+	}
 	writeJSON(w, http.StatusOK, s.chain.Status())
 }
 

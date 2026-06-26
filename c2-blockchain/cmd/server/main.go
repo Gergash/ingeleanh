@@ -29,13 +29,19 @@ func main() {
 		log.Printf("warning: redis not available: %v", err)
 	}
 	cache := chain.NewCache()
-	if cfg.RegistryAddress != "" {
-		hash := chain.ParseEndpointHash(cfg.RegistryAddress)
-		endpoints := chain.EndpointsJSON("https://localhost:" + cfg.Port)
-		db.UpsertChainConfig(context.Background(), hash, endpoints, 30, 1, 0)
-		cache.Update(hash, 30, 1, 0)
+	chainReader, err := chain.NewReader(cfg.RPCURL, cfg.RegistryAddress, cache)
+	if err != nil {
+		log.Printf("warning: chain reader: %v", err)
+		chainReader, _ = chain.NewReader("", "", cache)
 	}
-	chainReader, _ := chain.NewReader(cfg.RPCURL, cfg.RegistryAddress, cache)
+	if cfg.RegistryAddress != "" && chainReader != nil {
+		if chainCfg, err := chainReader.GetConfig(context.Background()); err != nil {
+			log.Printf("warning: chain getConfig: %v", err)
+		} else {
+			log.Printf("chain config from registry: version=%d beacon_interval=%ds endpoint_hash=%s",
+				chainCfg.Version, chainCfg.BeaconIntervalSec, chainCfg.EndpointHash)
+		}
+	}
 	srv := api.NewServer(cfg, db, redis, chainReader)
 	handler := srv.Router()
 	addr := ":" + cfg.Port

@@ -2,6 +2,7 @@ package chain
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"math/big"
@@ -68,14 +69,17 @@ func NewReader(rpcURL, registryAddr string, cache *Cache) (*Reader, error) {
 	}, nil
 }
 
+func getConfigSelectorHex() string {
+	return "c3f909d4"
+}
+
 // GetConfig eth_call (CHAIN-002).
 func (r *Reader) GetConfig(ctx context.Context) (Config, error) {
 	if r.client == nil {
 		cfg, _ := r.cache.Get()
 		return cfg, nil
 	}
-	// getConfig() selector
-	data := common.Hex2Bytes("20965255")
+	data := common.Hex2Bytes(getConfigSelectorHex())
 	msg := ethereum.CallMsg{To: &r.registry, Data: data}
 	out, err := r.client.CallContract(ctx, msg, nil)
 	if err != nil {
@@ -119,9 +123,10 @@ func (r *Reader) Status() map[string]interface{} {
 	}
 }
 
+// ParseEndpointHash matches ethers.sha256(utf8(url)) used in deploy.js.
 func ParseEndpointHash(url string) string {
-	h := common.BytesToHash([]byte(url)) // simplified lab hash
-	return h.Hex()
+	sum := sha256.Sum256([]byte(url))
+	return "0x" + hex.EncodeToString(sum[:])
 }
 
 func EndpointsJSON(primaryURL string) string {
