@@ -31,16 +31,22 @@ cp .env.example .env
 |----------|---------|-------------|
 | `C2_DB_PATH` | `./c2.db` | SQLite database path |
 | `C2_REDIS_ADDR` | `localhost:6379` | Redis address |
-| `C2_PORT` | `8443` | HTTPS/WSS port |
+| `C2_PORT` | `8443` | HTTP/HTTPS port |
+| `C2_INSECURE` | `true` | Lab: HTTP plano sin TLS (`http://localhost:8443`) |
 | `C2_TLS_CERT` | `./certs/server.crt` | TLS certificate (lab self-signed ok) |
 | `C2_TLS_KEY` | `./certs/server.key` | TLS private key |
 | `C2_MASTER_KEY` | — | 32-byte hex; session key encryption at-rest |
 | `C2_JWT_SECRET` | — | Operator JWT signing secret |
+| `C2_OPERATOR_USER` | `operator` | Login operador (lab) |
+| `C2_OPERATOR_PASS` | `lab` | Password operador (lab) |
 | `C2_REGISTRY_ADDRESS` | — | `C2Registry` contract address on Polygon Amoy |
 | `C2_RPC_URL` | — | Polygon Amoy RPC endpoint |
 | `C2_OPERATOR_WALLET_KEY` | — | Private key for on-chain operator calls (lab only) |
+| `C2_SERVER_URL` | `http://localhost:8443` | URL del server para el agente (usar `http` si `C2_INSECURE=true`) |
 
 > **Never commit `.env`** — it contains secrets.
+>
+> El server y el agente **no cargan `.env` automáticamente**. Exporta variables antes de `go run` o usa `set -a && source .env && set +a` (bash).
 
 ## Redis via Docker (dev)
 
@@ -73,21 +79,165 @@ sqlite3 c2.db < migrations/001_initial.sql
 
 ## Run the server (Fase 2)
 
+Desde `ingeleanh/c2-blockchain/`:
+
 ```bash
+export C2_INSECURE=true
+# opcional: set -a && source .env && set +a
 go run ./cmd/server
 ```
 
-Server starts on `https://localhost:8443`. Healthcheck:
+Con `C2_INSECURE=true` el server usa **HTTP** en `:8443`. Healthcheck:
 
 ```bash
-curl -k https://localhost:8443/api/v1/health
+curl -s http://localhost:8443/api/v1/health
 ```
 
 ## Run the agent (Fase 2)
 
+Segunda terminal, misma carpeta:
+
 ```bash
-C2_SERVER_URL=https://localhost:8443 go run ./cmd/agent
+export C2_SERVER_URL=http://localhost:8443
+go run ./cmd/agent
 ```
+
+Esperado en logs: `agent registered: <uuid>`.
+
+Modo gateway IoT (opcional):
+
+```bash
+C2_IOT_GATEWAY=true C2_SERVER_URL=http://localhost:8443 go run ./cmd/agent
+```
+
+---
+
+## Prueba de lab — guion completo (v0.1.0)
+
+Historial de comandos validado en Windows (Git Bash) para demostrar el **mínimo Aligo**: servidor, agente, operador, comando remoto `whoami`, dashboard.
+
+### 0. Prerrequisitos
+
+```bash
+cd ingeleanh/c2-blockchain
+cp .env.example .env   # editar si hace falta; no commitear .env
+go version             # >= 1.22
+docker run -d --name c2-redis -p 6379:6379 redis:7-alpine
+```
+
+### 1. Tests automatizados (opcional, antes de demo)
+
+```bash
+go test -race -cover ./...
+cd contracts && npm ci && npx hardhat test && cd ..
+```
+
+### 2. Terminal A — C2 Server
+
+```bash
+cd ingeleanh/c2-blockchain
+export C2_INSECURE=true
+go run ./cmd/server
+```
+
+### 3. Terminal B — Agente (una sola instancia)
+
+```bash
+cd ingeleanh/c2-blockchain
+export C2_SERVER_URL=http://localhost:8443
+go run ./cmd/agent
+```
+
+Anota el `agent_id` del agente activo (o usa el que tenga `last_beacon` reciente en el dashboard).
+
+### 4. Terminal C — Verificación API (operador)
+
+**Health**
+
+```bash
+curl -s http://localhost:8443/api/v1/health
+```
+
+**Login operador → copiar solo el valor de `token` (cadena `eyJ...`)**
+
+```bash
+curl -s http://localhost:8443/api/v1/operator/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"operator","password":"lab"}'
+```
+
+**Listar agentes**
+
+```bash
+curl -s http://localhost:8443/api/v1/agents \
+  -H "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
+**Crear tarea `whoami` (JSON en una sola línea; reemplazar `AGENT_ID`)**
+
+```bash
+curl -s http://localhost:8443/api/v1/tasks \
+  -H "Authorization: Bearer TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id":"AGENT_ID","command_type":"shell","payload":{"argv":["whoami"]}}'
+```
+
+Respuesta esperada: `{"status":"pending","task_id":"<uuid>"}`
+
+**Consultar resultado (esperar 10–15 s; reemplazar `TASK_ID`)**
+
+```bash
+curl -s http://localhost:8443/api/v1/tasks/TASK_ID \
+  -H "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
+Respuesta esperada: `status: completed`, `exit_code: 0`, `stdout` con el usuario del host.
+
+**Estado blockchain (lab sin deploy)**
+
+```bash
+curl -s http://localhost:8443/api/v1/chain/status \
+  -H "Authorization: Bearer TU_TOKEN_AQUI"
+```
+
+### 5. Dashboard
+
+1. Abrir `http://localhost:8443/dashboard/`
+2. Pegar en el campo JWT **solo** el token (`eyJ...`), no el JSON completo
+3. **Guardar token** → **Actualizar**
+4. Verificar: tabla **Agentes** con `active` y `last_beacon` reciente; barra inferior sin `undefined`
+
+Consultar resultado de tarea desde consola del navegador (F12):
+
+```javascript
+fetch('/api/v1/tasks/TASK_ID', {
+  headers: { Authorization: 'Bearer ' + localStorage.getItem('c2_jwt') }
+}).then(r => r.json()).then(console.log);
+```
+
+### 6. Comando IoT cerradura (opcional)
+
+Con agente en modo gateway (`C2_IOT_GATEWAY=true`):
+
+```bash
+curl -s http://localhost:8443/api/v1/tasks \
+  -H "Authorization: Bearer TU_TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"agent_id":"AGENT_ID","command_type":"iot_command","payload":{"target_device":"lock-main","action":"unlock","duration_sec":5}}'
+```
+
+### Problemas frecuentes
+
+| Síntoma | Causa | Solución |
+|---------|--------|----------|
+| `handshake: unexpected end of JSON input` | Bug agente leyendo respuesta incorrecta | Usar versión actual de `cmd/agent` |
+| Agent no conecta | `C2_SERVER_URL` con `https` y server en HTTP | `export C2_SERVER_URL=http://localhost:8443` |
+| Handshake falla | Redis no corre | `docker start c2-redis` o crear contenedor |
+| `NOT_FOUND` en tarea | `agent_id` con salto de línea en JSON multilínea | Usar JSON en **una línea** |
+| Dashboard vacío | JWT vacío o JSON completo pegado | Pegar solo `eyJ...` y Guardar token |
+| 6 agentes en dashboard | Varias instancias de agente | Dejar una sola terminal con `go run ./cmd/agent` |
+
+---
 
 ## Run tests
 

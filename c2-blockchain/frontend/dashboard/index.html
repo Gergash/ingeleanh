@@ -7,39 +7,101 @@
     body { font-family: system-ui, sans-serif; margin: 1rem; background: #0f1419; color: #e6edf3; }
     h1 { font-size: 1.2rem; }
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    section { background: #161b22; padding: 1rem; border-radius: 8px; }
+    section { background: #161b22; padding: 1rem; border-radius: 8px; min-height: 120px; }
     table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { padding: 0.35rem; border-bottom: 1px solid #30363d; }
+    th, td { padding: 0.35rem; border-bottom: 1px solid #30363d; text-align: left; }
     .chain { margin-top: 1rem; padding: 0.75rem; background: #21262d; border-radius: 6px; }
-    button { background: #238636; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; }
+    .error { color: #f85149; font-size: 0.85rem; margin: 0.5rem 0; }
+    .hint { color: #8b949e; font-size: 0.8rem; }
+    button { background: #238636; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem; }
+    button.secondary { background: #30363d; }
+    input { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 0.35rem; width: 100%; margin-top: 0.25rem; }
+    label { font-size: 0.8rem; color: #8b949e; }
   </style>
 </head>
 <body>
   <h1>C2 Blockchain-Blindado — Panel de estado</h1>
-  <button onclick="refresh()">Actualizar</button>
-  <div class="grid">
-    <section><h2>Agentes</h2><div id="agents"></div></section>
-    <section><h2>Tareas</h2><div id="tasks">Use API POST /tasks</div></section>
-    <section><h2>Eventos IoT</h2><div id="events"></div></section>
+  <div style="margin-bottom: 1rem;">
+    <label for="jwt">JWT (POST /api/v1/operator/login)</label>
+    <input id="jwt" type="text" placeholder="Pega el token aquí" />
+    <div style="margin-top: 0.5rem;">
+      <button onclick="saveToken()">Guardar token</button>
+      <button class="secondary" onclick="refresh()">Actualizar</button>
+      <button class="secondary" onclick="clearToken()">Limpiar token</button>
+    </div>
+    <div id="auth-error" class="error" style="display:none"></div>
   </div>
-  <div class="chain" id="chain"></div>
+  <div class="grid">
+    <section><h2>Agentes</h2><div id="agents" class="hint">Sin datos</div></section>
+    <section><h2>Tareas</h2><div id="tasks" class="hint">Crear con POST /api/v1/tasks; consultar con GET /api/v1/tasks/{id}</div></section>
+    <section><h2>Eventos IoT</h2><div id="events" class="hint">Sin eventos</div></section>
+  </div>
+  <div class="chain" id="chain">Chain: sin conexión on-chain (lab local)</div>
   <script>
-    const token = localStorage.getItem('c2_jwt') || prompt('JWT token (login primero):');
-    if (token) localStorage.setItem('c2_jwt', token);
+    function getToken() {
+      const input = document.getElementById('jwt').value.trim();
+      if (input) return input;
+      return (localStorage.getItem('c2_jwt') || '').trim();
+    }
+    function saveToken() {
+      const t = document.getElementById('jwt').value.trim();
+      if (t) localStorage.setItem('c2_jwt', t);
+      refresh();
+    }
+    function clearToken() {
+      localStorage.removeItem('c2_jwt');
+      document.getElementById('jwt').value = '';
+      refresh();
+    }
     async function api(path) {
+      const token = getToken();
+      if (!token) {
+        throw new Error('Sin JWT. Haz login y pega el token.');
+      }
       const r = await fetch('/api/v1' + path, { headers: { Authorization: 'Bearer ' + token } });
-      return r.json();
+      const data = await r.json();
+      if (!r.ok) {
+        throw new Error(data.error_code || r.statusText);
+      }
+      return data;
     }
     async function refresh() {
-      const agents = await api('/agents');
-      document.getElementById('agents').innerHTML = '<table><tr><th>ID</th><th>OS</th><th>Status</th></tr>' +
-        (agents.agents||[]).map(a => `<tr><td>${a.agent_id}</td><td>${a.os}</td><td>${a.status}</td></tr>`).join('') + '</table>';
-      const events = await api('/events?limit=20');
-      document.getElementById('events').innerHTML = '<table><tr><th>Tipo</th><th>Resumen</th></tr>' +
-        (events.events||[]).map(e => `<tr><td>${e.event_type||''}</td><td>${e.payload_summary||JSON.stringify(e)}</td></tr>`).join('') + '</table>';
-      const chain = await api('/chain/status');
-      document.getElementById('chain').textContent = 'Chain: v' + chain.config_version + ' | Block: ' + chain.last_indexed_block + ' | Amoy ' + chain.chain_id;
+      const errEl = document.getElementById('auth-error');
+      errEl.style.display = 'none';
+      const saved = localStorage.getItem('c2_jwt');
+      if (saved && !document.getElementById('jwt').value) {
+        document.getElementById('jwt').value = saved;
+      }
+      try {
+        const agents = await api('/agents');
+        const rows = (agents.agents || []);
+        document.getElementById('agents').innerHTML = rows.length
+          ? '<table><tr><th>ID</th><th>OS</th><th>Status</th><th>Last beacon</th></tr>' +
+            rows.map(a => `<tr><td>${a.agent_id}</td><td>${a.os}</td><td>${a.status}</td><td>${a.last_beacon || '—'}</td></tr>`).join('') +
+            '</table>'
+          : '<span class="hint">No hay agentes registrados</span>';
+
+        const events = await api('/events?limit=20');
+        const evs = (events.events || []);
+        document.getElementById('events').innerHTML = evs.length
+          ? '<table><tr><th>Tipo</th><th>Resumen</th></tr>' +
+            evs.map(e => `<tr><td>${e.event_type || ''}</td><td>${e.payload_summary || JSON.stringify(e)}</td></tr>`).join('') +
+            '</table>'
+          : '<span class="hint">Sin eventos IoT aún</span>';
+
+        const chain = await api('/chain/status');
+        const ver = chain.config_version ?? 0;
+        const block = chain.last_indexed_block ?? 0;
+        const chainId = chain.chain_id ?? '—';
+        document.getElementById('chain').textContent =
+          `Chain: v${ver} | Block: ${block} | Red: ${chain.network || 'local'} (${chainId}) | Registry: ${chain.contract_address || 'no desplegado'}`;
+      } catch (e) {
+        errEl.textContent = 'Error: ' + e.message + ' — Obtén token: curl -s http://localhost:8443/api/v1/operator/login -d \'{"username":"operator","password":"lab"}\'';
+        errEl.style.display = 'block';
+      }
     }
+    const saved = localStorage.getItem('c2_jwt');
+    if (saved) document.getElementById('jwt').value = saved;
     refresh();
   </script>
 </body>

@@ -77,9 +77,12 @@ func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
 	}
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("handshake step 1: status %d body: %s", resp.StatusCode, string(body))
+	}
 	var ch map[string]interface{}
 	if err := json.Unmarshal(body, &ch); err != nil {
-		return err
+		return fmt.Errorf("handshake step 1: %w (body: %s)", err, string(body))
 	}
 	nonce, _ := ch["nonce"].(string)
 	serverECDHPub, _ := ch["server_ecdh_pub"].(string)
@@ -108,11 +111,11 @@ func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	body2, _ := io.ReadAll(resp.Body)
+	body2, _ := io.ReadAll(resp2.Body)
 	resp2.Body.Close()
 	var complete map[string]interface{}
 	if err := json.Unmarshal(body2, &complete); err != nil {
-		return err
+		return fmt.Errorf("handshake step 2: %w (body: %s, status: %d)", err, string(body2), resp2.StatusCode)
 	}
 	if complete["step"] != "complete" {
 		return fmt.Errorf("handshake failed: %s", string(body2))
