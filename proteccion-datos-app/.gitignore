@@ -1,0 +1,15 @@
+.env
+*.pem
+secrets/
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.coverage
+postgres_data/
