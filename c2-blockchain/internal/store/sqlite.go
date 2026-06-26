@@ -276,6 +276,37 @@ func (s *SQLite) GetIoTDeviceState(ctx context.Context, id string) (deviceType, 
 	return
 }
 
+func (s *SQLite) ListIoTDevices(ctx context.Context) ([]map[string]interface{}, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, gateway_agent_id, device_type, zone, status, lock_state, last_event_at
+		FROM iot_devices ORDER BY id`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []map[string]interface{}
+	for rows.Next() {
+		var id, gw, dtype, zone, status, lockState string
+		var lastEvent sql.NullTime
+		if err := rows.Scan(&id, &gw, &dtype, &zone, &status, &lockState, &lastEvent); err != nil {
+			return nil, err
+		}
+		m := map[string]interface{}{
+			"device_id":   id,
+			"gateway_id":  gw,
+			"device_type": dtype,
+			"zone":        zone,
+			"status":      status,
+			"lock_state":  lockState,
+		}
+		if lastEvent.Valid {
+			m["last_event_at"] = lastEvent.Time.Format(time.RFC3339)
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
 func MasterKeyFromHex(hexStr string) ([]byte, error) {
 	if hexStr == "" {
 		return nil, nil

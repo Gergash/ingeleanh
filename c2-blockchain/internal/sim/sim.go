@@ -89,3 +89,8 @@ func (s *Simulator) ToJSON(m map[string]interface{}) string {
 	b, _ := json.Marshal(m)
 	return string(b)
 }
+
+// Float returns a small varying float for simulated telemetry demos.
+func (s *Simulator) Float() float64 {
+	return float64(time.Now().Unix()%100) / 10.0
+}

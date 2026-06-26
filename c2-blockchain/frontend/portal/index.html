@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>C2 Blockchain-Blindado — Portal Operador</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <!-- Login -->
+  <div id="login-screen" class="login-wrap">
+    <div class="login-card">
+      <h1>Centro de Inteligencia Residencial</h1>
+      <p class="sub">C2 Blockchain-Blindado · Portal operador (lab Aligo)</p>
+      <label for="login-user">Usuario</label>
+      <input id="login-user" type="text" value="operator" autocomplete="username" />
+      <label for="login-pass">Contraseña</label>
+      <input id="login-pass" type="password" value="lab" autocomplete="current-password" />
+      <button class="btn btn-primary" style="width:100%" onclick="login()">Entrar al portal</button>
+      <div id="login-error" class="error"></div>
+      <p class="login-hint">
+        Acceso demo para jurado: <strong>operator</strong> / <strong>lab</strong>.<br />
+        Datos IoT simulados desde CSV Laureles · Registry en Polygon Amoy testnet.<br />
+        Documentación: <a href="/docs/demo/README.md" style="color:#58a6ff">Guía demo</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app-screen" class="hidden">
+    <header class="app-header">
+      <div>
+        <h1>C2 Blockchain-Blindado</h1>
+        <span class="badge badge-live">LIVE LAB</span>
+        <span id="demo-badge" class="badge">DEMO SIMULADO</span>
+      </div>
+      <div class="header-actions">
+        <span id="refresh-status" style="font-size:0.8rem;color:#8b949e"></span>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAll()">Actualizar</button>
+        <button class="btn btn-secondary btn-sm" onclick="replayAccess()">Simular acceso Laureles</button>
+        <button class="btn btn-secondary btn-sm" onclick="seedDemo()">Recargar demo</button>
+        <button class="btn btn-secondary btn-sm" onclick="logout()">Salir</button>
+      </div>
+    </header>
+
+    <main class="app-main">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="label">Agentes activos</div>
+          <div class="value" id="stat-agents">0</div>
+          <div class="value"><small id="stat-agents-sub">—</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Dispositivos IoT</div>
+          <div class="value" id="stat-devices">0</div>
+          <div class="value"><small>simulados + live</small></div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Eventos</div>
+          <div class="value" id="stat-events">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Blockchain config</div>
+          <div class="value" id="stat-chain">v0</div>
+          <div class="value"><small>Polygon Amoy</small></div>
+        </div>
+      </div>
+
+      <div id="chain-bar" class="chain-bar">Chain: cargando…</div>
+
+      <div class="panel">
+        <h2>Dispositivos residenciales (demo)</h2>
+        <div id="devices-grid" class="device-grid"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <h2>Agentes C2</h2>
+          <div id="agents-table"></div>
+        </div>
+        <div class="panel">
+          <h2>Eventos IoT</h2>
+          <div id="events-list" class="events-list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Comando remoto (C2)</h2>
+        <div class="task-form">
+          <div>
+            <label style="font-size:0.75rem;color:#8b949e">Agente</label>
+            <select id="task-agent"></select>
+            <p id="task-agent-hint" style="font-size:0.75rem;color:#8b949e;margin:0.25rem 0 0"></p>
+          </div>
+          <button class="btn btn-primary" onclick="runWhoami()">Ejecutar whoami</button>
+        </div>
+        <div id="task-result" class="task-result">Resultado de tarea aparecerá aquí.</div>
+      </div>
+
+      <p class="footer-note">
+        C2 propio · Cifrado AES-GCM · Registry <code>C2Registry</code> en Amoy ·
+        Canal camuflado como API IoT · Hackathon Aligo Defensores Informáticos
+      </p>
+    </main>
+  </div>
+
+  <script src="portal.js"></script>
+</body>
+</html>

@@ -31,6 +31,7 @@ type agentState struct {
 	ecdsaPubHex string
 	sim         *sim.Simulator
 	iotGateway  bool
+	beaconCount int
 }
 
 func main() {
@@ -143,12 +144,31 @@ func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
 }
 
 func (a *agentState) beacon() error {
-	plain, _ := json.Marshal(map[string]interface{}{
-		"type":      "beacon",
-		"agent_id":  a.agentID,
-		"timestamp": time.Now().Unix(),
-		"status":    "idle",
-	})
+	var plainPayload map[string]interface{}
+	if a.iotGateway {
+		a.beaconCount++
+		switch a.beaconCount % 3 {
+		case 0:
+			plainPayload = a.sim.MotionEvent("lobby")
+		case 1:
+			plainPayload = a.sim.Telemetry("meter-energy-01", 8.2+a.sim.Float())
+		default:
+			plainPayload = map[string]interface{}{
+				"type":      "beacon",
+				"agent_id":  a.agentID,
+				"timestamp": time.Now().Unix(),
+				"status":    "idle",
+			}
+		}
+	} else {
+		plainPayload = map[string]interface{}{
+			"type":      "beacon",
+			"agent_id":  a.agentID,
+			"timestamp": time.Now().Unix(),
+			"status":    "idle",
+		}
+	}
+	plain, _ := json.Marshal(plainPayload)
 	var enc crypto.Envelope
 	if err := enc.Encrypt(a.sessionKey, plain); err != nil {
 		return err

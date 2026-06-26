@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ingeleanh/c2-blockchain/internal/api"
 	"github.com/ingeleanh/c2-blockchain/internal/chain"
@@ -43,9 +44,25 @@ func main() {
 		}
 	}
 	srv := api.NewServer(cfg, db, redis, chainReader)
+	if cfg.DemoMode {
+		if err := srv.SeedDemoData(context.Background()); err != nil {
+			log.Printf("warning: demo seed: %v", err)
+		} else {
+			log.Printf("demo mode: IoT simulado + eventos Laureles CSV (data/)")
+		}
+		go func() {
+			ticker := time.NewTicker(45 * time.Second)
+			defer ticker.Stop()
+			for range ticker.C {
+				if _, err := srv.ReplayLaurelesAccess(context.Background()); err != nil {
+					return
+				}
+			}
+		}()
+	}
 	handler := srv.Router()
 	addr := ":" + cfg.Port
-	log.Printf("C2 server listening on %s", addr)
+	log.Printf("C2 server listening on %s (portal: http://localhost:%s/portal/)", addr, cfg.Port)
 	if cfg.Insecure {
 		log.Fatal(http.ListenAndServe(addr, handler))
 	}

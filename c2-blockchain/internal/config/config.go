@@ -18,6 +18,8 @@ type Config struct {
 	RegistryAddress string
 	RPCURL          string
 	Insecure        bool
+	DemoMode        bool
+	DataCSV         string
 	OperatorUser    string
 	OperatorPass    string
 }
@@ -40,6 +42,8 @@ func Load() Config {
 		RegistryAddress: os.Getenv("C2_REGISTRY_ADDRESS"),
 		RPCURL:          os.Getenv("C2_RPC_URL"),
 		Insecure:        insecure,
+		DemoMode:        os.Getenv("C2_DEMO_MODE") == "true",
+		DataCSV:         envOr("C2_DATA_CSV", "data/LAURELES V2 AB 21.csv"),
 		OperatorUser:    envOr("C2_OPERATOR_USER", "operator"),
 		OperatorPass:    envOr("C2_OPERATOR_PASS", "lab"),
 	}

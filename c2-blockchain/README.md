@@ -42,6 +42,7 @@ cp .env.example .env
 | `C2_REGISTRY_ADDRESS` | — | `C2Registry` contract address on Polygon Amoy |
 | `C2_RPC_URL` | — | Polygon Amoy RPC endpoint |
 | `C2_OPERATOR_WALLET_KEY` | — | Private key for on-chain operator calls (lab only) |
+| `C2_DEMO_MODE` | `true` | Carga 3 dispositivos IoT simulados al arrancar (portal jurado) |
 | `C2_SERVER_URL` | `http://localhost:8443` | URL del server para el agente (usar `http` si `C2_INSECURE=true`) |
 
 > **Never commit `.env`** — it contains secrets.
@@ -278,26 +279,19 @@ c2-blockchain/
 
 ## Fase 3 — Demo y entrega (Hackathon)
 
-**Estado lab:** contrato desplegado en Amoy, E2E whoami verificado, chain status v1.
+**Portal operador:** http://localhost:8443/portal/ — login `operator` / `lab`
 
 | Recurso | Enlace |
 |---------|--------|
+| Portal (UI producto) | [/portal/](http://localhost:8443/portal/) |
 | Contrato `C2Registry` | `0x629238eD79c23267fe502AAd81E5AEfee3908750` |
 | Polygonscan Amoy | https://amoy.polygonscan.com/address/0x629238eD79c23267fe502AAd81E5AEfee3908750 |
 | Guion demo en vivo | [docs/demo/GUION_DEMO_VIVO.md](./docs/demo/GUION_DEMO_VIVO.md) |
 | Guion video 3–7 min | [docs/demo/GUION_VIDEO.md](./docs/demo/GUION_VIDEO.md) |
+| **Cloudflare (link jurados)** | [docs/demo/CLOUDFLARE_TUNNEL.md](./docs/demo/CLOUDFLARE_TUNNEL.md) |
 | Checklist entregables | [docs/demo/CHECKLIST_ENTREGABLES.md](./docs/demo/CHECKLIST_ENTREGABLES.md) |
 
-**Antes de grabar o presentar:**
-
-```bash
-docker start c2-redis
-cd ingeleanh/c2-blockchain
-go run ./cmd/server    # Terminal A
-go run ./cmd/agent     # Terminal B — una sola instancia
-```
-
-IoT stretch (gateway + unlock): `C2_IOT_GATEWAY=true go run ./cmd/agent`
+Activar datos IoT simulados: `C2_DEMO_MODE=true` en `.env` (carga 3 dispositivos al arrancar).
 
 ---
 

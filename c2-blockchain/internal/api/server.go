@@ -34,6 +34,7 @@ type Server struct {
 	masterKey   []byte
 	challenges  map[string]*handshake.Challenge
 	sessionKeys map[string][]byte
+	laureles    *sim.LaurelesFeed
 	mu          sync.RWMutex
 	upgrader    websocket.Upgrader
 }
@@ -70,9 +71,24 @@ func (s *Server) Router() http.Handler {
 	r.Post("/api/v1/tasks", s.auth(s.handleCreateTask))
 	r.Get("/api/v1/tasks/{taskID}", s.auth(s.handleGetTask))
 	r.Get("/api/v1/events", s.auth(s.handleEvents))
+	r.Get("/api/v1/devices", s.auth(s.handleListDevices))
+	r.Post("/api/v1/devices/{deviceID}/command", s.auth(s.handleDeviceCommand))
 	r.Get("/api/v1/devices/{deviceID}/state", s.auth(s.handleDeviceState))
 	r.Get("/api/v1/chain/status", s.auth(s.handleChainStatus))
+	r.Get("/api/v1/portal/info", s.handlePortalInfo)
+	if s.cfg.DemoMode {
+		r.Post("/api/v1/demo/seed", s.auth(s.handleDemoSeed))
+		r.Post("/api/v1/demo/replay-access", s.auth(s.handleDemoReplayAccess))
+	}
 	r.Get("/api/v1/ws/agent", s.handleWSAgent)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/portal/", http.StatusFound)
+	})
+	r.Handle("/portal/*", http.StripPrefix("/portal/", http.FileServer(http.Dir("frontend/portal"))))
+	r.Get("/portal", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/portal/", http.StatusFound)
+	})
+	r.Handle("/docs/*", http.StripPrefix("/docs/", http.FileServer(http.Dir("docs"))))
 	r.Handle("/dashboard/*", http.StripPrefix("/dashboard/", http.FileServer(http.Dir("frontend/dashboard"))))
 	r.Get("/dashboard", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dashboard/", http.StatusFound)
@@ -87,6 +103,7 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		"version":          "0.1.0",
 		"chain_connected":  chainOK,
 		"registry_address": s.cfg.RegistryAddress,
+		"demo_mode":        s.cfg.DemoMode,
 	})
 }
 

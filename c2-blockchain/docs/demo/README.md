@@ -19,8 +19,18 @@ Documentación operativa para **demo en vivo** y **video 3–7 min**.
 | [GUION_DEMO_VIVO.md](./GUION_DEMO_VIVO.md) | Paso a paso ante jurado (15–20 min) |
 | [GUION_VIDEO.md](./GUION_VIDEO.md) | Guion video 3–7 min con tiempos |
 | [CHECKLIST_ENTREGABLES.md](./CHECKLIST_ENTREGABLES.md) | MIN-005: repo, docs, video, demo |
+| [CLOUDFLARE_TUNNEL.md](./CLOUDFLARE_TUNNEL.md) | Publicar portal para jurados (HTTPS) |
 
-## Inicio rápido (antes de demo)
+## Portal operador (UI producto)
+
+**URL lab:** http://localhost:8443/portal/
+
+| Credencial | Valor |
+|------------|--------|
+| Usuario | `operator` |
+| Contraseña | `lab` |
+
+Con `C2_DEMO_MODE=true` se cargan **3 dispositivos IoT simulados** al arrancar el server.
 
 ```bash
 docker start c2-redis || docker run -d --name c2-redis -p 6379:6379 redis:7-alpine
