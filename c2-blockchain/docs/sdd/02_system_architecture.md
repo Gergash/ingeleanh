@@ -106,12 +106,115 @@ flowchart TB
 
 Detalle de implementación paso a paso: [07_iot_residential_fusion.md](./07_iot_residential_fusion.md).
 
-## Diagrama de componentes
+## Capas de la plataforma
+
+El sistema se estructura en tres capas funcionales que se refuerzan mutuamente:
+
+```mermaid
+flowchart TB
+  subgraph L1 [Capa_1_Plataforma_de_Integracion]
+    Backend[Backend_Go_SQLite_Redis]
+    RESTWS[API_REST_WebSocket]
+    Dashboard[Dashboard_Estado]
+  end
+
+  subgraph L2 [Capa_2_Seguridad_Aplicada]
+    AES[AES_256_GCM]
+    ECDSA_ECDH[ECDSA_ECDH_por_dispositivo]
+    ChainReg[Registro_Blockchain]
+  end
+
+  subgraph L3 [Capa_3_Pruebas_y_Validacion]
+    Tests[Casos_de_Prueba]
+    Demos[Escenarios_de_Demo]
+  end
+
+  L1 --> L2
+  L2 --> L3
+  RESTWS --> AES
+  ECDSA_ECDH --> ChainReg
+  Tests --> Demos
+```
+
+### Capa 1 — Plataforma de integración
+
+Backend ligero que gestiona registros, sincronización y visualización.
+
+| Componente | Tecnología | Responsabilidad |
+|------------|------------|-----------------|
+| **Backend** | Go 1.22+ / SQLite / Redis | Orquestación, persistencia, sesiones, colas de tareas |
+| **API REST** | `chi` + TLS 1.3 | CRUD agentes, tareas, operador login, healthcheck |
+| **WebSocket** | `gorilla/websocket` + TLS | Beacon en tiempo real, entrega de tareas, resultados |
+| **Dashboard** | HTML/JS estático servido por Go | Visualización de agentes, eventos, estado de dispositivos IoT |
+
+#### Dashboard de estado (MVP)
+
+Panel web simple servido desde el mismo binario del servidor (`cmd/server`), sin framework frontend pesado.
+
+| Vista | Contenido | Fuente de datos |
+|-------|-----------|-----------------|
+| **Agentes** | Lista con `agent_id`, hostname, OS, status, `last_beacon` | `GET /api/v1/agents` |
+| **Tareas** | Historial con estado, resultado, timestamps | `GET /api/v1/tasks?agent_id=` |
+| **Eventos IoT** | Timeline de `iot_event` y `iot_telemetry` por gateway | `GET /api/v1/events` (nuevo) |
+| **Cerraduras** | Estado actual `locked`/`unlocked` por `smart_lock` | `GET /api/v1/devices/{id}/state` (nuevo) |
+| **Blockchain** | Config activa, version, último bloque indexado | `GET /api/v1/chain/status` (nuevo) |
+
+```text
+┌─────────────────────────────────────────────┐
+│  Dashboard C2 Blockchain-Blindado           │
+├───────────┬─────────────┬───────────────────┤
+│ Agentes   │ Tareas      │ IoT Eventos       │
+│ ● gw-01  │ whoami ✓    │ motion zona-1     │
+│   active  │ unlock ✓    │ kwh: 12.4         │
+│ ● win-02 │ status ⏳   │ lock-main: locked │
+│   active  │             │                   │
+├───────────┴─────────────┴───────────────────┤
+│ Chain: v3 │ Block: 42018 │ Amoy 80002       │
+└─────────────────────────────────────────────┘
+```
+
+#### Endpoints nuevos para dashboard
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/events` | Lista eventos IoT recientes (operador JWT) |
+| GET | `/api/v1/devices/{id}/state` | Estado actual de dispositivo simulado |
+| GET | `/api/v1/chain/status` | Config, version, último bloque indexado |
+
+### Capa 2 — Seguridad aplicada desde el inicio
+
+La seguridad no es capa posterior; está integrada desde el primer handshake.
+
+| Mecanismo | Aplicación | Momento |
+|-----------|------------|---------|
+| **AES-256-GCM** | Todo payload post-handshake (beacons, tareas, resultados, IoT) | Desde el primer beacon |
+| **ECDSA secp256k1** | Firma de identidad en handshake, headers de cada request | Desde la primera conexión |
+| **ECDH P-256 + HKDF** | Derivación de clave de sesión AES | Durante handshake |
+| **Registro blockchain** | `registerOperator`, `registerDevice`, `updateConfig` en Polygon Amoy | Tras bootstrap del contrato |
+| **Anti-replay** | Nonce + timestamp ±30s + Redis idempotency | Cada request |
+| **TLS 1.3** | Transporte | Siempre (lab y demo) |
+
+Detalle completo: [05_security_specs.md](./05_security_specs.md).
+
+### Capa 3 — Pruebas y validación
+
+Cada capa se valida con casos de prueba y escenarios de demostración documentados en [06_testing_strategy.md](./06_testing_strategy.md).
+
+| Escenario de validación | Capas involucradas | Test IDs |
+|--------------------------|-------------------|----------|
+| Conexión segura device→server | Capa 1 + Capa 2 | CRYPTO-001, HS-001…005, API-001 |
+| Registro en blockchain | Capa 2 | SC-001…006, IOT-005 |
+| Respuesta ante fallo (failover) | Capa 1 + Capa 2 | E2E-002, CAMO-003 |
+| Device conecta → handshake → evento en blockchain | Todas | E2E-INTEG-001 (nuevo) |
+
+---
+
+## Diagrama de componentes (detallado)
 
 ```mermaid
 flowchart TB
   subgraph operator [OperatorConsole]
-    UI[WebDashboard]
+    UI[Dashboard]
   end
 
   subgraph c2server [C2Server]
@@ -121,6 +224,7 @@ flowchart TB
     CryptoLayer[CryptoService]
     TaskQueue[RedisQueue]
     DB[(SQLite)]
+    EventStore[EventStore]
   end
 
   subgraph agent [Agent]
@@ -136,6 +240,7 @@ flowchart TB
   UI --> API
   UI --> WS
   API --> DB
+  API --> EventStore
   API --> TaskQueue
   WS --> TaskQueue
   ChainWatcher --> Registry
@@ -147,6 +252,7 @@ flowchart TB
   Exec --> Beacon
   CryptoLayer --> API
   CryptoLayer --> WS
+  EventStore --> DB
 ```
 
 ## Despliegue
@@ -165,7 +271,7 @@ Servicios previstos:
 
 | Servicio | Imagen / build | Puerto | Función |
 |----------|----------------|--------|---------|
-| `c2-server` | build `cmd/server` | 8443 (TLS) | API REST + WebSocket |
+| `c2-server` | build `cmd/server` | 8443 (TLS) | API REST + WebSocket + Dashboard |
 | `redis` | redis:7-alpine | 6379 | Sesiones, queue, rate limit |
 | `hardhat` (opcional) | node + hardhat | 8545 | Chain local para dev sin Amoy |
 
@@ -214,9 +320,12 @@ ingeleanh/c2-blockchain/
 │   ├── tasks/           # Task queue y ejecución
 │   ├── executor/        # shell (OS-aware), iot_command, opcional msf bridge
 │   ├── sim/             # Sensores y cerraduras simulados (lab)
-│   └── camouflage/      # Jitter beacon, headers IoT, sanitización logs
+│   ├── camouflage/      # Jitter beacon, headers IoT, sanitización logs
+│   └── dashboard/       # HTML/JS estático + handlers para panel de estado
 ├── contracts/
 │   └── C2Registry.sol   # Smart contract
+├── web/
+│   └── dashboard/       # Assets estáticos del dashboard (HTML, CSS, JS)
 └── tests/
     ├── integration/
     └── e2e/

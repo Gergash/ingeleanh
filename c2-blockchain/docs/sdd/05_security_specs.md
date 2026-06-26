@@ -2,11 +2,40 @@
 
 ## Principios
 
-1. **Defense in depth**: TLS + autenticación ECDSA + cifrado de payloads + registry on-chain
-2. **Least privilege**: operadores con scope mínimo; agentes solo acceden a sus propios recursos
-3. **No secrets in repo**: claves vía env, vault o archivos fuera de git
-4. **Fail secure**: error de crypto → rechazo, nunca bypass
-5. **Audit everything**: `audit_log` para acciones sensibles
+1. **Security from day zero**: la seguridad no es capa posterior; cada componente nace cifrado y autenticado
+2. **Defense in depth**: TLS + autenticación ECDSA + cifrado de payloads + registry on-chain
+3. **Least privilege**: operadores con scope mínimo; agentes solo acceden a sus propios recursos
+4. **No secrets in repo**: claves vía env, vault o archivos fuera de git
+5. **Fail secure**: error de crypto → rechazo, nunca bypass
+6. **Audit everything**: `audit_log` para acciones sensibles
+
+---
+
+## Seguridad aplicada desde el inicio
+
+Cada dispositivo (agente, gateway IoT) pasa por la cadena de seguridad completa **antes de transmitir cualquier dato útil**:
+
+```mermaid
+flowchart LR
+  Device[Dispositivo_o_Gateway]
+  TLS[TLS_1_3]
+  ECDSA[Handshake_ECDSA]
+  ECDH[Sesion_ECDH_HKDF]
+  AES[Payload_AES_256_GCM]
+  Chain[Registro_Blockchain]
+
+  Device --> TLS --> ECDSA --> ECDH --> AES --> Chain
+```
+
+| Momento | Mecanismo activado | Sin esto, no procede |
+|---------|--------------------|-----------------------|
+| Conexión TCP/TLS | TLS 1.3 obligatorio | Rechazo de conexión plana |
+| Primer request | Handshake challenge ECDSA | Sin identidad verificada → no hay sesión |
+| Derivación de clave | ECDH P-256 + HKDF-SHA256 | Sin clave de sesión → no cifra payloads |
+| Todo payload posterior | AES-256-GCM con nonce + tag | Beacon, tarea, resultado, IoT — todo cifrado |
+| Post-handshake | `registerDevice` / `registerOperator` en Polygon Amoy | Identidad trazable on-chain |
+
+**Resultado**: no existe un momento donde el sistema opere "en abierto". La seguridad es **prerrequisito funcional**, no feature opcional.
 
 ---
 

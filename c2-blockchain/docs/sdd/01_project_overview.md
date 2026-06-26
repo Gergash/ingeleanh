@@ -111,7 +111,7 @@ Cada **gateway residencial** actúa como **agente C2**; dispositivos IoT reporta
 - **Obfuscación de binarios** para evadir antivirus (fuera de alcance MVP)
 - Uso contra sistemas de terceros sin autorización explícita
 - Transporte de payloads de comando vía transacciones blockchain (costo y latencia prohibidos)
-- Dashboard web completo (MVP: API + logs; UI opcional fase posterior)
+- Dashboard web complejo con frameworks frontend pesados (MVP: panel HTML/JS estático servido por Go)
 
 ## Stack tecnológico
 
@@ -130,6 +130,7 @@ Cada **gateway residencial** actúa como **agente C2**; dispositivos IoT reporta
 | **Cliente chain (scripts)** | `ethers.js` v6 | Deploy y scripts Hardhat |
 | **Criptografía** | std `crypto/` Go | AES-256-GCM, ECDSA secp256k1, ECDH P-256, HKDF-SHA256 |
 | **TLS** | TLS 1.3 | Obligatorio en producción/lab |
+| **Dashboard** | HTML/JS estático (servido por Go) | Panel de estado: agentes, tareas, IoT, blockchain |
 | **Contenedores** | Docker Compose | Server + Redis (+ Hardhat node opcional local) |
 
 ## Blockchain — Polygon Amoy testnet

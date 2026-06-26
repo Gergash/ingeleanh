@@ -37,6 +37,7 @@
 - **Plataformas agente**: Linux y Windows (VMs lab autorizadas)
 - **Innovación**: C2 propio + blockchain + camuflaje de canal + IoT (no réplica de frameworks conocidos)
 - **Fusión aplicativa**: Centro de Inteligencia Residencial (IoT) + C2 como motor de seguridad — ver [07_iot_residential_fusion.md](./07_iot_residential_fusion.md)
+- **Capas de plataforma**: Integración (Go/SQLite/Redis + API + Dashboard) → Seguridad (AES-GCM, ECDSA/ECDH, blockchain) → Pruebas y validación
 
 ## Criterios del reto Aligo
 
@@ -79,6 +80,9 @@ Marcar cada ítem antes de iniciar Fase 2 (desarrollo TDD):
 - [ ] Smart contract `C2Registry` especificado (structs, funciones, eventos)
 - [ ] Modelo de amenazas con mitigaciones para MITM, replay y spoofing
 - [ ] ≥15 casos de prueba identificados con IDs en `06_testing_strategy.md`
+- [ ] Tres capas (plataforma, seguridad, validación) documentadas en `02` y `06`
+- [ ] Dashboard de estado definido (vistas, endpoints) en `02_system_architecture.md`
+- [ ] Escenarios de validación por capas con flujos end-to-end en `06_testing_strategy.md`
 - [ ] No existe código fuente fuera de `docs/` en `c2-blockchain/`
 - [ ] Equipo aprueba explícitamente el SDD
 
@@ -102,3 +106,5 @@ Orden de desarrollo previsto tras aprobación:
 4. C2 server API/WebSocket + integration tests
 5. Agent beacon loop + e2e
 6. Gateway IoT residencial + eventos simulados (ver `07_iot_residential_fusion.md`)
+7. Dashboard de estado (HTML/JS estático, endpoints nuevos)
+8. Escenarios de validación por capas (E2E-INTEG-001)

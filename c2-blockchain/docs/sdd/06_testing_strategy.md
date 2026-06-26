@@ -48,6 +48,91 @@ Medición: `go test -coverprofile=coverage.out ./...`
 
 ---
 
+## Escenarios de validación por capas
+
+Cada capa de la plataforma se valida con escenarios que verifican integración real, no solo funciones aisladas.
+
+### Escenario 1 — Conexión segura (Capa 1 + Capa 2)
+
+```text
+Dispositivo/gateway → TLS → handshake ECDSA → sesión ECDH → beacon AES-GCM → server acepta
+```
+
+| Paso | Verificación |
+|------|-------------|
+| 1. Dispositivo inicia TLS | Conexión aceptada solo con TLS 1.3 |
+| 2. Handshake ECDSA | Agente registrado en SQLite con `ecdsa_pub` única |
+| 3. Derivación ECDH + HKDF | Ambos lados generan misma clave AES-256 |
+| 4. Primer beacon cifrado | Server descifra, actualiza `last_beacon`, responde ACK |
+| **Tests**: CRYPTO-001, HS-001…005, API-001 |
+
+### Escenario 2 — Registro en blockchain (Capa 2)
+
+```text
+Operador → registerOperator on-chain → updateConfig → agente lee getConfig() → valida endpointHash
+```
+
+| Paso | Verificación |
+|------|-------------|
+| 1. Deploy C2Registry | Contrato en Polygon Amoy con `owner` |
+| 2. Operador registrado | Evento `OperatorRegistered` emitido |
+| 3. Config actualizada | Evento `ConfigUpdated` con `endpointHash` y `beaconIntervalSec` |
+| 4. Agente lee config | `getConfig()` retorna version correcta; hash coincide con URL local |
+| **Tests**: SC-001…006, CHAIN-001…002, CAMO-003 |
+
+### Escenario 3 — Respuesta ante fallo (Capa 1 + Capa 2)
+
+```text
+Server primario cae → agente detecta timeout → lee getConfig() on-chain → reconecta a backup
+```
+
+| Paso | Verificación |
+|------|-------------|
+| 1. Server deja de responder | 2 × beacon_interval sin ACK |
+| 2. Agente lee blockchain | `getConfig()` retorna `endpointHash` de backup |
+| 3. Verifica hash | `SHA256(backup_url) == endpointHash` |
+| 4. Reconexión exitosa | Handshake o resume con backup server |
+| **Tests**: E2E-002, CAMO-003 |
+
+### Escenario 4 — Flujo completo device→handshake→blockchain (las tres capas)
+
+```text
+Gateway IoT → handshake → beacon → iot_event → registerDevice on-chain → dashboard muestra estado
+```
+
+```mermaid
+sequenceDiagram
+  participant GW as GatewayIoT
+  participant Server as C2Server
+  participant Chain as C2Registry
+  participant Dash as Dashboard
+
+  GW->>Server: TLS + handshake ECDSA
+  Server->>Server: INSERT agents (iot_gateway)
+  GW->>Server: beacon AES-GCM (iot_event motion)
+  Server->>Server: persist audit_log
+  Server->>Chain: registerDevice(pubKeyHash, gatewayHash)
+  Chain-->>Server: event DeviceRegistered
+  Dash->>Server: GET /api/v1/events
+  Server-->>Dash: [iot_event, DeviceRegistered]
+```
+
+| Paso | Verificación |
+|------|-------------|
+| 1. Gateway completa handshake | `agent_role=iot_gateway` en SQLite |
+| 2. Evento IoT cifrado llega | Audit log registra `iot_event` |
+| 3. Identidad registrada on-chain | `DeviceRegistered` visible en Amoy explorer |
+| 4. Dashboard refleja estado | Panel muestra agente activo + evento |
+| **Tests**: IOT-001…005, E2E-003, E2E-INTEG-001 (nuevo) |
+
+### Test de integración nuevo
+
+| ID | Tipo | Descripción | Expected |
+|----|------|-------------|----------|
+| E2E-INTEG-001 | E2E | Flujo completo device→handshake→evento→blockchain→dashboard | Agente registrado, evento visible, identidad on-chain, dashboard actualizado |
+
+---
+
 ## Criterios de aceptación del reto Aligo
 
 Estos criterios convierten el documento del reto en verificaciones concretas. El proyecto no se considera listo para entrega si falla cualquiera de los mínimos.
@@ -86,6 +171,8 @@ Estos criterios convierten el documento del reto en verificaciones concretas. El
 | DEMO-007 | Evento IoT residencial | Gateway reporta `iot_event` o `iot_telemetry` cifrado; operador ve resultado |
 | DEMO-008 | Comando cerradura | Operador `unlock` → gateway simula → estado `unlocked` en API |
 | DEMO-009 | Camuflaje ante jurado | Explicar tráfico como API IoT; mostrar blob cifrado + config on-chain sin URL en claro |
+| DEMO-010 | Dashboard | Abrir panel; agentes, tareas, eventos IoT, estado cerraduras y config blockchain visibles |
+| DEMO-011 | Flujo completo 3 capas | Device conecta → handshake → evento → blockchain → dashboard (un solo flujo demostrado) |
 
 ---
 
@@ -178,7 +265,7 @@ Estos criterios convierten el documento del reto en verificaciones concretas. El
 | EXEC-002 | Unit | shell Windows argv | comando cmd-compatible |
 | EXEC-003 | Unit | msf_module opcional | bridge invoca módulo; resultado por canal C2 propio |
 
-**Total casos documentados: 38** (≥15 requerido)
+**Total casos documentados: 39** (≥15 requerido) + 4 escenarios de validación por capas
 
 ---
 
@@ -240,6 +327,7 @@ Triggers: PR a `main`, push a `ingeleanh/c2-blockchain/`
 | 8 | Gateway IoT | IOT-001 … IOT-005, E2E-003 |
 | 9 | `internal/executor` | EXEC-001 … EXEC-003, E2E-004 |
 | 10 | Simuladores IoT + camuflaje | IOT-006, IOT-007, CAMO-001 … CAMO-003 |
+| 11 | Flujo completo 3 capas | E2E-INTEG-001, DEMO-010, DEMO-011 |
 
 ---
 

@@ -459,6 +459,84 @@ Todos los frames son texto JSON. Estructura:
 
 ---
 
+## Dashboard & estado (nuevos endpoints MVP)
+
+Endpoints consumidos por el panel de estado (dashboard HTML/JS estático servido por el propio servidor Go).
+
+### `GET /api/v1/events`
+
+Lista eventos IoT recientes (paginados).
+
+| Header | Requerido | Valor |
+|--------|-----------|-------|
+| Authorization | Sí | `Bearer {jwt}` |
+
+**Query params**
+
+| Param | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `limit` | int | 50 | Máximo eventos |
+| `offset` | int | 0 | Paginación |
+| `gateway_id` | string | — | Filtro por gateway |
+
+**Response 200**
+
+```json
+{
+  "events": [
+    {
+      "id": "evt-uuid",
+      "agent_id": "gateway-uuid",
+      "event_type": "iot_event",
+      "device_id": "sensor-motion-01",
+      "payload_summary": "motion detected zone-1",
+      "created_at": "2025-06-26T12:00:00Z"
+    }
+  ],
+  "total": 142,
+  "limit": 50,
+  "offset": 0
+}
+```
+
+### `GET /api/v1/devices/{id}/state`
+
+Estado actual de un dispositivo IoT simulado.
+
+**Response 200**
+
+```json
+{
+  "device_id": "lock-main",
+  "device_type": "smart_lock",
+  "state": "locked",
+  "last_action": "lock",
+  "last_action_by": "operator-uuid",
+  "updated_at": "2025-06-26T12:05:00Z"
+}
+```
+
+### `GET /api/v1/chain/status`
+
+Estado del indexer blockchain y config activa.
+
+**Response 200**
+
+```json
+{
+  "contract_address": "0xabc...def",
+  "network": "polygon-amoy",
+  "chain_id": 80002,
+  "config_version": 3,
+  "beacon_interval_sec": 30,
+  "endpoint_hash": "0x...",
+  "last_indexed_block": 42018,
+  "indexer_lag_blocks": 2
+}
+```
+
+---
+
 ## Rate limits
 
 | Endpoint / recurso | Límite | Ventana |
