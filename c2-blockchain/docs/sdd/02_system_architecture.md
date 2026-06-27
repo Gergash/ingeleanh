@@ -66,6 +66,8 @@ Los retadores piden **innovación** (no réplicas de C2 conocidos) y operación 
 | Blockchain stealth | `C2Registry`, `internal/chain` | Config e identidades; comandos **nunca** on-chain |
 | Escenario realista | Gateway + simuladores | Sensores simulados, lock/unlock, telemetría |
 
+**[Probable] Limitación puerto:** el lab usa `:8443` mientras el camuflaje HTTP imita IoT (`ResidentialHub/1.0`). Un SOC que correlacione puerto + protocolo marcará `:8443` como panel admin, no como MQTT/CoAP en `:8883`/`5683` ni HTTPS estándar en `:443`. Ver [05_security_specs.md](./05_security_specs.md) — sección *Inconsistencia capa 4 vs capa 7*.
+
 Detalle completo: [05_security_specs.md](./05_security_specs.md) (sección Camuflaje operativo).
 
 ## Capa IoT — Centro de Inteligencia Residencial
@@ -497,7 +499,9 @@ sequenceDiagram
   Agent->>Backup: handshake or resume session per policy
 ```
 
-**Política de resolución de endpoint**: El agente mantiene un mapa local `hash → URL` (configurado en deploy). Al leer `endpointHash` on-chain, verifica que `SHA256(url) == endpointHash` antes de conectar. Si no coincide, aborta (anti-MITM de config).
+**Política de resolución de endpoint**: El agente mantiene un mapa local `hash → URL` (configurado en deploy). Al leer `endpointHash` on-chain, verifica que `SHA256(url) == endpointHash` antes de conectar. Si no coincide, aborta.
+
+**[Suposición] Límites de seguridad:** esto mitiga redirección a URLs **fuera** del mapa local o config on-chain inconsistente con candidatas conocidas. **No** protege si una URL del mapa está comprometida o si el atacante ya conoce todas las candidatas — el hash no añade secreto, solo binding con operadores on-chain. Detalle en [05_security_specs.md](./05_security_specs.md) — *Límites de endpointHash*.
 
 ## Operator Console
 

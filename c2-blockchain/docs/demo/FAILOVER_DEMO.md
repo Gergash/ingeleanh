@@ -2,6 +2,8 @@
 
 El agente lee `getConfig()` del contrato en Polygon Amoy y solo conecta URLs cuyo `SHA-256` coincide con `endpointHash` on-chain.
 
+> **Límite documentado:** el hash evita conectar a URLs no listadas en `C2_URL_CANDIDATES`; no protege si una URL candidata está comprometida. Ver `docs/sdd/05_security_specs.md` (*Límites de endpointHash*).
+
 ## Variables del agente
 
 ```bash
