@@ -1,22 +1,127 @@
+'use strict';
+
 const REGISTRY_AMOY = '0x629238eD79c23267fe502AAd81E5AEfee3908750';
 const POLYGONSCAN = 'https://amoy.polygonscan.com/address/' + REGISTRY_AMOY;
 const DEMO_GATEWAY_ID = 'a1000000-0000-4000-8000-000000000001';
 
-let token = localStorage.getItem('c2_portal_jwt') || '';
-let refreshTimer = null;
-let demoGatewayId = '';
+/** Canonical API paths — single source of truth for routing. */
+const ROUTES = {
+  login: () => '/api/v1/operator/login',
+  portalInfo: () => '/api/v1/portal/info',
+  agents: () => '/api/v1/agents',
+  tasks: () => '/api/v1/tasks',
+  task: (taskId) => '/api/v1/tasks/' + encodeURIComponent(taskId),
+  events: (limit) => '/api/v1/events?limit=' + encodeURIComponent(String(limit)),
+  devices: () => '/api/v1/devices',
+  deviceCommand: (deviceId) =>
+    '/api/v1/devices/' + encodeURIComponent(deviceId) + '/command',
+  chainStatus: () => '/api/v1/chain/status',
+  demoSeed: () => '/api/v1/demo/seed',
+  demoReplayAccess: () => '/api/v1/demo/replay-access',
+  demoThreeLayer: () => '/api/v1/demo/three-layer',
+};
 
-function show(id) { document.getElementById(id).classList.remove('hidden'); }
-function hide(id) { document.getElementById(id).classList.add('hidden'); }
+const AppState = {
+  token: localStorage.getItem('c2_portal_jwt') || '',
+  demoGatewayId: '',
+  refreshTimer: null,
+  refreshInFlight: false,
+  pollGeneration: 0,
+};
 
-async function api(path, opts = {}) {
-  const headers = { ...(opts.headers || {}) };
-  if (token) headers.Authorization = 'Bearer ' + token;
-  if (opts.body) headers['Content-Type'] = 'application/json';
-  const r = await fetch('/api/v1' + path, { ...opts, headers });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data.error_code || data.message || r.statusText);
+function apiBase() {
+  const raw = (typeof window !== 'undefined' && window.C2_API_BASE) || '';
+  return String(raw).replace(/\/$/, '');
+}
+
+function buildUrl(routePath) {
+  if (!routePath.startsWith('/api/v1')) {
+    throw new Error('Ruta API inválida: ' + routePath);
+  }
+  const base = apiBase();
+  return base ? base + routePath : routePath;
+}
+
+function setToken(token) {
+  AppState.token = token || '';
+  if (AppState.token) {
+    localStorage.setItem('c2_portal_jwt', AppState.token);
+  } else {
+    localStorage.removeItem('c2_portal_jwt');
+  }
+}
+
+function cancelActivePoll() {
+  AppState.pollGeneration += 1;
+}
+
+/**
+ * Central HTTP client — all portal traffic goes through here.
+ * @param {string} routePath - path from ROUTES (must start with /api/v1)
+ * @param {{ method?: string, body?: object|string, auth?: boolean }} options
+ */
+async function request(routePath, options = {}) {
+  const method = options.method || 'GET';
+  const auth = options.auth !== false;
+  const headers = { Accept: 'application/json' };
+
+  if (auth && AppState.token) {
+    headers.Authorization = 'Bearer ' + AppState.token;
+  }
+
+  let bodyPayload = undefined;
+  if (options.body !== undefined && options.body !== null) {
+    headers['Content-Type'] = 'application/json';
+    bodyPayload =
+      typeof options.body === 'string' ? options.body : JSON.stringify(options.body);
+  }
+
+  const url = buildUrl(routePath);
+  const response = await fetch(url, { method, headers, body: bodyPayload });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error_code || data.message || response.statusText || 'REQUEST_FAILED');
+  }
   return data;
+}
+
+const API = {
+  login: (username, password) =>
+    request(ROUTES.login(), {
+      method: 'POST',
+      body: { username, password },
+      auth: false,
+    }),
+  portalInfo: () => request(ROUTES.portalInfo(), { auth: false }),
+  agents: () => request(ROUTES.agents()),
+  devices: () => request(ROUTES.devices()),
+  events: (limit) => request(ROUTES.events(limit)),
+  chainStatus: () => request(ROUTES.chainStatus()),
+  createTask: (taskBody) =>
+    request(ROUTES.tasks(), { method: 'POST', body: taskBody }),
+  getTask: (taskId) => request(ROUTES.task(taskId)),
+  lockCommand: (action) =>
+    request(ROUTES.deviceCommand('lock-main'), {
+      method: 'POST',
+      body: { action, duration_sec: 5 },
+    }),
+  demoSeed: () => request(ROUTES.demoSeed(), { method: 'POST', body: {} }),
+  demoReplayAccess: () =>
+    request(ROUTES.demoReplayAccess(), { method: 'POST', body: {} }),
+  demoThreeLayer: () =>
+    request(ROUTES.demoThreeLayer(), { method: 'POST', body: {} }),
+};
+
+function show(id) {
+  document.getElementById(id).classList.remove('hidden');
+}
+function hide(id) {
+  document.getElementById(id).classList.add('hidden');
+}
+
+function taskResultEl() {
+  return document.getElementById('task-result');
 }
 
 async function login() {
@@ -25,15 +130,11 @@ async function login() {
   const err = document.getElementById('login-error');
   err.textContent = '';
   try {
-    const r = await fetch('/api/v1/operator/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: user, password: pass }),
-    });
-    const data = await r.json();
-    if (!r.ok) throw new Error(data.error_code || 'Login fallido');
-    token = data.token;
-    localStorage.setItem('c2_portal_jwt', token);
+    const data = await API.login(user, pass);
+    if (!data.token) {
+      throw new Error('Respuesta sin token');
+    }
+    setToken(data.token);
     hide('login-screen');
     show('app-screen');
     await refreshAll();
@@ -44,8 +145,9 @@ async function login() {
 }
 
 function logout() {
-  token = '';
-  localStorage.removeItem('c2_portal_jwt');
+  cancelActivePoll();
+  setToken('');
+  AppState.demoGatewayId = '';
   stopAutoRefresh();
   hide('app-screen');
   show('login-screen');
@@ -53,34 +155,39 @@ function logout() {
 
 function startAutoRefresh() {
   stopAutoRefresh();
-  refreshTimer = setInterval(() => refreshAll(true), 15000);
+  AppState.refreshTimer = setInterval(() => refreshAll(true), 15000);
 }
 
 function stopAutoRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
+  if (AppState.refreshTimer) {
+    clearInterval(AppState.refreshTimer);
+    AppState.refreshTimer = null;
+  }
 }
 
 async function refreshAll(silent) {
+  if (AppState.refreshInFlight) return;
+  AppState.refreshInFlight = true;
   if (!silent) document.getElementById('refresh-status').textContent = 'Actualizando…';
   try {
-    const info = await api('/portal/info');
-    demoGatewayId = info.demo_gateway_id || '';
+    const info = await API.portalInfo();
+    AppState.demoGatewayId = info.demo_gateway_id || '';
     document.getElementById('demo-badge').classList.toggle('hidden', !info.demo_mode);
 
-    const agents = await api('/agents');
+    const agents = await API.agents();
     const list = agents.agents || [];
-    const active = list.filter(a => a.status === 'active').length;
+    const active = list.filter((a) => a.status === 'active').length;
     document.getElementById('stat-agents').textContent = active;
     document.getElementById('stat-agents-sub').textContent = list.length + ' registrados';
 
-    const devices = await api('/devices');
+    const devices = await API.devices();
     const devs = devices.devices || [];
     document.getElementById('stat-devices').textContent = devs.length;
 
-    const events = await api('/events?limit=30');
+    const events = await API.events(30);
     document.getElementById('stat-events').textContent = events.total || 0;
 
-    const chain = await api('/chain/status');
+    const chain = await API.chainStatus();
     document.getElementById('stat-chain').textContent = 'v' + (chain.config_version || 0);
     document.getElementById('chain-bar').innerHTML = buildChainBar(chain);
 
@@ -88,10 +195,17 @@ async function refreshAll(silent) {
     renderDevices(devs);
     renderEvents(events.events || []);
     populateAgentSelect(list);
-    document.getElementById('refresh-status').textContent = 'Actualizado ' + new Date().toLocaleTimeString();
+    document.getElementById('refresh-status').textContent =
+      'Actualizado ' + new Date().toLocaleTimeString();
   } catch (e) {
-    if (!silent) document.getElementById('refresh-status').textContent = 'Error: ' + e.message;
-    if (e.message.includes('UNAUTHORIZED') || e.message.includes('401')) logout();
+    if (!silent) {
+      document.getElementById('refresh-status').textContent = 'Error: ' + e.message;
+    }
+    if (e.message.includes('UNAUTHORIZED') || e.message.includes('401')) {
+      logout();
+    }
+  } finally {
+    AppState.refreshInFlight = false;
   }
 }
 
@@ -115,19 +229,30 @@ function renderAgents(agents) {
     el.innerHTML = '<p class="muted">Sin agentes. Inicia el agente o usa modo demo.</p>';
     return;
   }
-  el.innerHTML = '<table><tr><th>ID</th><th>Host</th><th>OS</th><th>Rol</th><th>Beacon</th></tr>' +
-    agents.map(a => `<tr>
+  el.innerHTML =
+    '<table><tr><th>ID</th><th>Host</th><th>OS</th><th>Rol</th><th>Beacon</th></tr>' +
+    agents
+      .map(
+        (a) =>
+          `<tr>
       <td class="mono">${a.agent_id.slice(0, 8)}…</td>
       <td>${a.hostname || '—'}</td>
       <td>${a.os || '—'}</td>
       <td>${a.agent_role || 'generic'}</td>
       <td>${formatBeacon(a.last_beacon)}</td>
-    </tr>`).join('') + '</table>';
+    </tr>`
+      )
+      .join('') +
+    '</table>';
 }
 
 function formatBeacon(ts) {
   if (!ts) return '—';
-  try { return new Date(ts).toLocaleString(); } catch { return ts; }
+  try {
+    return new Date(ts).toLocaleString();
+  } catch {
+    return ts;
+  }
 }
 
 function renderDevices(devs) {
@@ -139,42 +264,50 @@ function renderDevices(devs) {
     { id: 'lock-main', label: 'Cerradura principal', icon: '🔐' },
   ];
   const byId = {};
-  devs.forEach(d => { byId[d.device_id] = d; });
+  devs.forEach((d) => {
+    byId[d.device_id] = d;
+  });
 
-  el.innerHTML = catalog.map(c => {
-    const d = byId[c.id] || {};
-    const lock = d.lock_state || (c.id === 'lock-main' ? 'locked' : 'active');
-    const isLock = c.id === 'lock-main';
-    const stateClass = lock === 'unlocked' ? 'state-ok' : (isLock ? 'state-warn' : 'state-ok');
-    let actions = '';
-    if (isLock) {
-      actions = `
+  el.innerHTML = catalog
+    .map((c) => {
+      const d = byId[c.id] || {};
+      const lock = d.lock_state || (c.id === 'lock-main' ? 'locked' : 'active');
+      const isLock = c.id === 'lock-main';
+      const stateClass = lock === 'unlocked' ? 'state-ok' : isLock ? 'state-warn' : 'state-ok';
+      let actions = '';
+      if (isLock) {
+        actions = `
         <button class="btn btn-sm btn-primary" onclick="lockCommand('unlock')">Abrir</button>
         <button class="btn btn-sm btn-secondary" onclick="lockCommand('lock')">Cerrar</button>
       `;
-    }
-    return `<div class="device-card">
+      }
+      return `<div class="device-card">
       <div class="dtype">${c.icon} ${d.device_type || c.label}</div>
       <div class="name">${c.id}</div>
       <div class="state ${stateClass}">${isLock ? 'Estado: ' + lock : 'Zona: ' + (d.zone || 'lobby')}</div>
       ${actions}
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function renderEvents(events) {
   const el = document.getElementById('events-list');
   if (!events.length) {
-    el.innerHTML = '<p style="color:var(--muted)">Sin eventos. Carga demo o inicia gateway IoT.</p>';
+    el.innerHTML =
+      '<p style="color:var(--muted)">Sin eventos. Carga demo o inicia gateway IoT.</p>';
     return;
   }
-  el.innerHTML = events.map(e => {
-    const summary = e.payload_summary || e.device_id || e.event_type || JSON.stringify(e).slice(0, 60);
-    return `<div class="event-row">
+  el.innerHTML = events
+    .map((e) => {
+      const summary =
+        e.payload_summary || e.device_id || e.event_type || JSON.stringify(e).slice(0, 60);
+      return `<div class="event-row">
       <div class="time">${e.created_at || ''}</div>
       <div><strong>${e.event_type || 'event'}</strong> — ${summary}</div>
     </div>`;
-  }).join('');
+    })
+    .join('');
 }
 
 function isLiveC2Agent(a) {
@@ -198,85 +331,94 @@ function populateAgentSelect(agents) {
   hint.textContent = 'Agente con beacon reciente (no simulado)';
   hint.style.color = '#8b949e';
   live.sort((a, b) => (b.last_beacon || '').localeCompare(a.last_beacon || ''));
-  sel.innerHTML = live.map(a =>
-    `<option value="${a.agent_id}">${a.hostname || 'agent'} (${a.agent_id.slice(0, 8)}…)</option>`
-  ).join('');
+  sel.innerHTML = live
+    .map(
+      (a) =>
+        `<option value="${a.agent_id}">${a.hostname || 'agent'} (${a.agent_id.slice(0, 8)}…)</option>`
+    )
+    .join('');
 }
 
 async function runWhoami() {
+  cancelActivePoll();
+  const pollGen = AppState.pollGeneration;
+
   const agentId = document.getElementById('task-agent').value;
-  const out = document.getElementById('task-result');
+  const out = taskResultEl();
   if (!agentId) {
     out.textContent = 'Selecciona un agente C2 en vivo (go run ./cmd/agent).';
     return;
   }
   out.textContent = 'Enviando tarea whoami…';
   try {
-    const created = await api('/tasks', {
-      method: 'POST',
-      body: JSON.stringify({
-        agent_id: agentId,
-        command_type: 'shell',
-        payload: { argv: ['whoami'] },
-      }),
+    const created = await API.createTask({
+      agent_id: agentId,
+      command_type: 'shell',
+      payload: { argv: ['whoami'] },
     });
     if (!created.task_id) {
       out.textContent = 'Error: respuesta sin task_id — ' + JSON.stringify(created);
       return;
     }
-    out.textContent = 'pending task_id=' + created.task_id + ' — esperando agente (~30s)…';
-    pollTask(created.task_id, 0);
+    out.textContent =
+      'pending task_id=' + created.task_id + ' — esperando agente (~30s)…';
+    pollTask(created.task_id, 0, pollGen);
   } catch (e) {
     out.textContent = 'Error: ' + e.message;
   }
 }
 
-async function pollTask(taskId, attempt) {
+function pollTask(taskId, attempt, pollGen) {
+  if (pollGen !== AppState.pollGeneration) return;
+
   if (attempt > 12) {
-    document.getElementById('task-result').textContent =
+    taskResultEl().textContent =
       'Tiempo agotado. Verifica que el agente esté corriendo (go run ./cmd/agent).';
     return;
   }
-  try {
-    const t = await api('/tasks/' + taskId);
-    const out = document.getElementById('task-result');
-    if (t.status === 'completed' || t.status === 'failed') {
-      out.textContent = JSON.stringify(t, null, 2);
-      return;
-    }
-    setTimeout(() => pollTask(taskId, attempt + 1), 2500);
-  } catch (e) {
-    if (e.message === 'NOT_FOUND' && attempt < 3) {
-      setTimeout(() => pollTask(taskId, attempt + 1), 1000);
-      return;
-    }
-    document.getElementById('task-result').textContent =
-      'Error poll: ' + e.message + ' — reinicia server+agente si persiste.';
-  }
+
+  API.getTask(taskId)
+    .then((t) => {
+      if (pollGen !== AppState.pollGeneration) return;
+      const out = taskResultEl();
+      if (t.status === 'completed' || t.status === 'failed') {
+        out.textContent = JSON.stringify(t, null, 2);
+        return;
+      }
+      setTimeout(() => pollTask(taskId, attempt + 1, pollGen), 2500);
+    })
+    .catch((e) => {
+      if (pollGen !== AppState.pollGeneration) return;
+      if (e.message === 'NOT_FOUND' && attempt < 3) {
+        setTimeout(() => pollTask(taskId, attempt + 1, pollGen), 1000);
+        return;
+      }
+      taskResultEl().textContent =
+        'Error poll: ' + e.message + ' — reinicia server+agente si persiste.';
+    });
 }
 
 async function lockCommand(action) {
+  const out = taskResultEl();
   try {
-    const res = await api('/devices/lock-main/command', {
-      method: 'POST',
-      body: JSON.stringify({ action, duration_sec: 5 }),
-    });
-    document.getElementById('task-result').textContent = 'Cerradura: ' + JSON.stringify(res);
+    const res = await API.lockCommand(action);
+    out.textContent = 'Cerradura: ' + JSON.stringify(res);
     await refreshAll(true);
   } catch (e) {
-    document.getElementById('task-result').textContent = 'Error cerradura: ' + e.message;
+    out.textContent = 'Error cerradura: ' + e.message;
   }
 }
 
 async function runThreeLayer() {
-  const out = document.getElementById('task-result');
+  const out = taskResultEl();
   out.textContent = 'Ejecutando DEMO-011 (IoT → C2 → blockchain)…';
   try {
-    const res = await api('/demo/three-layer', { method: 'POST', body: '{}' });
-    const lines = (res.steps || []).map(s =>
-      `[${s.layer}] ${s.title}: ${s.detail || ''}`
+    const res = await API.demoThreeLayer();
+    const lines = (res.steps || []).map(
+      (s) => '[' + s.layer + '] ' + s.title + ': ' + (s.detail || '')
     );
-    out.textContent = res.narrative + '\n\n' + lines.join('\n') +
+    out.textContent =
+      res.narrative + '\n\n' + lines.join('\n') +
       '\n\nchain: ' + JSON.stringify(res.chain, null, 2);
     await refreshAll(true);
   } catch (e) {
@@ -285,19 +427,21 @@ async function runThreeLayer() {
 }
 
 async function replayAccess() {
+  const out = taskResultEl();
   try {
-    const res = await api('/demo/replay-access', { method: 'POST', body: '{}' });
-    document.getElementById('task-result').textContent =
-      'Acceso Laureles simulado: ' + (res.event && res.event.payload_summary || JSON.stringify(res));
+    const res = await API.demoReplayAccess();
+    out.textContent =
+      'Acceso Laureles simulado: ' +
+      ((res.event && res.event.payload_summary) || JSON.stringify(res));
     await refreshAll(true);
   } catch (e) {
-    document.getElementById('task-result').textContent = 'Replay CSV: ' + e.message;
+    out.textContent = 'Replay CSV: ' + e.message;
   }
 }
 
 async function seedDemo() {
   try {
-    const res = await api('/demo/seed', { method: 'POST', body: '{}' });
+    const res = await API.demoSeed();
     alert(res.message || 'Demo cargado');
     await refreshAll();
   } catch (e) {
@@ -306,7 +450,7 @@ async function seedDemo() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (token) {
+  if (AppState.token) {
     hide('login-screen');
     show('app-screen');
     refreshAll();
