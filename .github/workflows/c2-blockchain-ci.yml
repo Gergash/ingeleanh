@@ -2,11 +2,15 @@ name: c2-blockchain CI
 
 on:
   push:
+    branches: [master, main]
     paths:
       - 'c2-blockchain/**'
+      - '.github/workflows/c2-blockchain-ci.yml'
   pull_request:
+    branches: [master, main]
     paths:
       - 'c2-blockchain/**'
+      - '.github/workflows/c2-blockchain-ci.yml'
 
 defaults:
   run:
