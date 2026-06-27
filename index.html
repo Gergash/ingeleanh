@@ -1,115 +1,381 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
 	<meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="Start your development with Ollie landing page.">
-    <meta name="author" content="Devcrud">
-    <title>datacracks Landing page | proyecto</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="description" content="Quantum Minds — C2 Blockchain-Blindado y Centro de Inteligencia Residencial. Hackathon Aligo Defensores Informáticos.">
+	<meta name="author" content="Quantum Minds">
+	<title>Quantum Minds | C2 Blockchain-Blindado</title>
 
-    <!-- font icons -->
-    <link rel="stylesheet" href="vendors/themify-icons/css/themify-icons.css">
-    
-    <!-- owl carousel -->
-    <link rel="stylesheet" href="vendors/owl-carousel/css/owl.carousel.css">
-    <link rel="stylesheet" href="vendors/owl-carousel/css/owl.theme.default.css">
-
-    <!-- Bootstrap + Ollie main styles -->
+	<link rel="stylesheet" href="vendors/themify-icons/css/themify-icons.css">
+	<link rel="stylesheet" href="vendors/owl-carousel/css/owl.carousel.css">
+	<link rel="stylesheet" href="vendors/owl-carousel/css/owl.theme.default.css">
 	<link rel="stylesheet" href="css/ollie.css">
 
+	<style>
+		.team-hero .carousel-title {
+			font-size: 2.75rem;
+			line-height: 1.15;
+		}
+		.team-hero .carousel-subtitle {
+			font-size: 1.15rem;
+			font-weight: 400;
+			opacity: 0.92;
+			margin-top: 1rem;
+		}
+		.badge-hackathon {
+			display: inline-block;
+			background: rgba(255, 255, 255, 0.15);
+			border: 1px solid rgba(255, 255, 255, 0.35);
+			border-radius: 999px;
+			padding: 0.35rem 1rem;
+			font-size: 0.85rem;
+			margin-top: 1.25rem;
+		}
+		.section-block {
+			padding: 5rem 0;
+		}
+		.section-block.alt {
+			background: #f8f9fa;
+		}
+		.section-heading {
+			margin-bottom: 2.5rem;
+		}
+		.section-heading h2 {
+			font-weight: 700;
+			margin-bottom: 0.5rem;
+		}
+		.section-heading p {
+			color: #6c757d;
+			max-width: 720px;
+		}
+		.resource-card {
+			background: #fff;
+			border-radius: 12px;
+			padding: 1.75rem;
+			height: 100%;
+			border: 1px solid #e9ecef;
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+		.resource-card:hover {
+			transform: translateY(-4px);
+			box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+		}
+		.resource-card .icon-wrap {
+			width: 48px;
+			height: 48px;
+			border-radius: 10px;
+			background: linear-gradient(135deg, #ff7c35, #eb5175);
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-size: 1.25rem;
+			margin-bottom: 1rem;
+		}
+		.resource-card h5 {
+			font-weight: 700;
+			margin-bottom: 0.5rem;
+		}
+		.resource-card p {
+			color: #6c757d;
+			font-size: 0.95rem;
+			margin-bottom: 1rem;
+		}
+		.resource-card a.btn-link {
+			color: #ff7c35;
+			font-weight: 600;
+			text-decoration: none;
+		}
+		.resource-card a.btn-link:hover {
+			color: #eb5175;
+		}
+		.resource-card.placeholder {
+			border-style: dashed;
+			border-color: #dee2e6;
+		}
+		.team-member {
+			text-align: center;
+			padding: 1.5rem;
+		}
+		.team-member .avatar {
+			width: 88px;
+			height: 88px;
+			border-radius: 50%;
+			background: linear-gradient(135deg, #ff7c35, #6f42c1);
+			color: #fff;
+			font-size: 1.75rem;
+			font-weight: 700;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 auto 1rem;
+		}
+		.team-member h6 {
+			font-weight: 700;
+			margin-bottom: 0.25rem;
+		}
+		.team-member p {
+			color: #6c757d;
+			font-size: 0.9rem;
+		}
+		.pill-list {
+			list-style: none;
+			padding: 0;
+			margin: 0;
+		}
+		.pill-list li {
+			display: inline-block;
+			background: #fff;
+			border: 1px solid #e9ecef;
+			border-radius: 999px;
+			padding: 0.4rem 0.9rem;
+			margin: 0.25rem;
+			font-size: 0.85rem;
+			color: #495057;
+		}
+		.navbar-brand-text {
+			font-weight: 800;
+			color: #343a40;
+			font-size: 1.1rem;
+		}
+		.footer-note {
+			color: #6c757d;
+			font-size: 0.9rem;
+		}
+	</style>
 </head>
-<!-- This site is converting visitors into subscribers and customers with https://respond.io --><script id="respondio__growth_tool" src="https://cdn.respond.io/widget/widget.js?wId=09dca140-e510-4cab-a784-be1109d92bed"></script><!-- https://respond.io -->
-<body data-spy="scroll" data-target=".navbar" data-offset="40" id="home">
 
-    <nav id="scrollspy" class="navbar navbar-light bg-light navbar-expand-lg fixed-top" data-spy="affix" data-offset-top="20">
-        <div class="container">
-            <a class="navbar-brand" href="#"><img src="assets/imgs/brand.svg" alt="" class="brand-img"></a>
-            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+<body data-spy="scroll" data-target=".navbar" data-offset="80" id="top">
 
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav ml-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#home">Home</a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+	<nav class="navbar navbar-light bg-light navbar-expand-lg fixed-top" data-spy="affix" data-offset-top="20">
+		<div class="container">
+			<a class="navbar-brand navbar-brand-text" href="#top">Quantum Minds</a>
+			<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+				aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Menú">
+				<span class="navbar-toggler-icon"></span>
+			</button>
+			<div class="collapse navbar-collapse" id="navbarSupportedContent">
+				<ul class="navbar-nav ml-auto">
+					<li class="nav-item"><a class="nav-link" href="#top">Inicio</a></li>
+					<li class="nav-item"><a class="nav-link" href="#proyecto">Proyecto</a></li>
+					<li class="nav-item"><a class="nav-link" href="#equipo">Equipo</a></li>
+					<li class="nav-item"><a class="nav-link" href="#enlaces">Enlaces</a></li>
+				</ul>
+			</div>
+		</div>
+	</nav>
 
+	<header id="top" class="header team-hero">
+		<div class="overlay"></div>
+		<div id="header-carousel" class="carousel slide carousel-fade" data-ride="carousel">
+			<div class="container">
+				<div class="carousel-inner">
+					<div class="carousel-item active">
+						<div class="carousel-caption d-none d-md-block text-left">
+							<h1 class="carousel-title">Quantum Minds</h1>
+							<p class="carousel-subtitle">
+								C2 Blockchain-Blindado · Centro de Inteligencia Residencial<br>
+								Command &amp; Control propio con registro on-chain, IoT simulado y portal operador.
+							</p>
+							<span class="badge-hackathon">Hackathon Aligo · Defensores Informáticos · Nivel 4</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="infos container mb-4 mb-md-2">
+			<div class="title">
+				<p class="font-small">Equipo</p>
+				<h6 class="subtitle font-weight-normal">Nicolas Murcia</h6>
+				<h6 class="subtitle font-weight-normal">Alejandro Castrillon</h6>
+				<h6 class="subtitle font-weight-normal">Geronimo Saldaña</h6>
+			</div>
+			<div class="socials text-right">
+				<div class="row justify-content-between">
+					<div class="col">
+						<a href="#enlaces"><i class="ti-link pr-2"></i> Documentación y demo</a>
+						<a class="d-block" href="https://github.com/Gergash/ingeleanh" target="_blank" rel="noopener">
+							<i class="ti-github pr-2"></i> Repositorio GitHub
+						</a>
+					</div>
+					<div class="col">
+						<h3 class="subtitle font-weight-normal mb-2">Polygon Amoy · C2Registry on-chain</h3>
+					</div>
+				</div>
+			</div>
+		</div>
+	</header>
 
-    <header id="home" class="header">
-        <div class="overlay"></div>
+	<section id="proyecto" class="section-block">
+		<div class="container">
+			<div class="section-heading">
+				<h2>El proyecto</h2>
+				<p>
+					Plataforma de Command and Control diseñada para laboratorios autorizados: servidor C2 en Go,
+					agente multi-OS, cifrado E2E, failover vía blockchain (Polygon Amoy) y fusión con un
+					<strong>Centro de Inteligencia Residencial</strong> — sensores, medidores y cerraduras simuladas
+					en un portal operador unificado.
+				</p>
+			</div>
+			<div class="row">
+				<div class="col-md-4 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-shield"></i></div>
+						<h5>C2 propio</h5>
+						<p>Handshake ECDSA, beacon WebSocket, tareas remotas y auditoría — sin depender de frameworks ofensivos como núcleo.</p>
+					</div>
+				</div>
+				<div class="col-md-4 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-link"></i></div>
+						<h5>Blockchain</h5>
+						<p>Contrato <code>C2Registry</code> en Amoy: configuración verificable, failover y metadatos sin exponer el canal en claro.</p>
+					</div>
+				</div>
+				<div class="col-md-4 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-home"></i></div>
+						<h5>IoT residencial</h5>
+						<p>Gateway simulado, eventos Laureles, cerradura lock/unlock y feed en vivo para la demo ante jurado.</p>
+					</div>
+				</div>
+			</div>
+			<ul class="pill-list mt-2">
+				<li>Go 1.22+</li>
+				<li>Solidity / Hardhat</li>
+				<li>Redis + SQLite</li>
+				<li>Portal operador</li>
+				<li>Cloudflare Tunnel</li>
+				<li>TDD + CI</li>
+			</ul>
+		</div>
+	</section>
 
-        <div id="header-carousel" class="carousel slide carousel-fade" data-ride="carousel">  
-            <div class="container">
-                <div class="carousel-inner">
-                    <div class="carousel-item active">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h1 class="carousel-title">We Are<br> INGE LEAN</h1>
-                            
-                        </div>
-                    </div>
-                    <div class="carousel-item">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h1 class="carousel-title">We Are <br> Costumer support</h1>
-                            
-                          </div>
-                    </div>
-                    <div class="carousel-item">
-                        <div class="carousel-caption d-none d-md-block">
-                            <h1 class="carousel-title">We Are <br> IA solutions</h1>
-                           
-                          </div>
-                    </div>
-                </div>
-            </div>        
-        </div>
+	<section id="equipo" class="section-block alt">
+		<div class="container">
+			<div class="section-heading text-center mx-auto">
+				<h2>Equipo Quantum Minds</h2>
+				<p>Desarrollo, arquitectura y documentación del reto C2 + fusión residencial para Aligo.</p>
+			</div>
+			<div class="row">
+				<div class="col-md-4">
+					<div class="team-member">
+						<div class="avatar">NM</div>
+						<h6>Nicolas Murcia</h6>
+						<p>Desarrollo &amp; arquitectura</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="team-member">
+						<div class="avatar">AC</div>
+						<h6>Alejandro Castrillon</h6>
+						<p>Backend &amp; blockchain</p>
+					</div>
+				</div>
+				<div class="col-md-4">
+					<div class="team-member">
+						<div class="avatar">GS</div>
+						<h6>Geronimo Saldaña</h6>
+						<p>IoT &amp; documentación</p>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
-        <div class="infos container mb-4 mb-md-2">
-            <div class="title">
-                <p class="font-small">Por:</p>
-                <h6 class="subtitle font-weight-normal">Nicolas Murcia</h6>
-                <h6 class="subtitle font-weight-normal">Alejandro Castrillon</h6>
-                <h6 class="subtitle font-weight-normal">Geronimo Saldaña</h6>
-            </div>
-            <div class="socials text-right">
-                <div class="row justify-content-between">
-                    <div class="col">
-                        <a href="https://www.canva.com/design/DAGuRiar_jw/uOxmouEaOxXclR7FJcmrIQ/edit?utm_content=DAGuRiar_jw&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton"><i class="ti-file pr-2"></i></i> Documentacion</a>
-			<a href="https://www.canva.com/design/DAGuS7UsGR0/1PGtJU71NmCrRpD2m7s_7g/edit"><i class="ti-file pr-2"></i></i> Descripcion general del proyecto</a>
-                        <a class="d-block subtitle"><i class="ti-email pr-2"></i> KPI's</a>
-                    </div>
-                    <div class="col">
-                        <h3 class="subtitle font-weight-normal mb-2">Nuestro canal de contacto asistido con IA ---> </h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </header>
+	<section id="enlaces" class="section-block">
+		<div class="container">
+			<div class="section-heading">
+				<h2>Documentación y accesos</h2>
+				<p>
+					Enlaces para jurados y evaluadores. Actualiza los marcados como pendiente con tu URL de
+					Cloudflare, diagramas y ficha técnica antes de la entrega.
+				</p>
+			</div>
+			<div class="row">
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card placeholder" id="link-demo">
+						<div class="icon-wrap"><i class="ti-world"></i></div>
+						<h5>Demo en producción (Cloudflare)</h5>
+						<p>Portal operador público vía tunnel. Login demo: <code>operator</code> / <code>lab</code>.</p>
+						<!-- Reemplaza el href con tu URL trycloudflare.com -->
+						<a class="btn-link" href="https://tu-url.trycloudflare.com/portal/" target="_blank" rel="noopener">
+							Abrir portal demo →
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-folder"></i></div>
+						<h5>Código C2 (repositorio)</h5>
+						<p>Carpeta <code>c2-blockchain</code>: server, agente, contratos, portal y docs SDD.</p>
+						<a class="btn-link" href="https://github.com/Gergash/ingeleanh/tree/master/c2-blockchain" target="_blank" rel="noopener">
+							Ver c2-blockchain en GitHub →
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card placeholder" id="link-diagramas">
+						<div class="icon-wrap"><i class="ti-layout"></i></div>
+						<h5>Diagramas de arquitectura</h5>
+						<p>Diagramas del sistema, flujos C2, blockchain e IoT residencial.</p>
+						<!-- Reemplaza el href con tu enlace (Canva, Drive, etc.) -->
+						<a class="btn-link" href="#" target="_blank" rel="noopener">
+							Ver diagramas →
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card placeholder" id="link-ficha">
+						<div class="icon-wrap"><i class="ti-clipboard"></i></div>
+						<h5>Ficha técnica</h5>
+						<p>Resumen ejecutivo, stack, MVPs y criterios de evaluación Aligo.</p>
+						<!-- Reemplaza el href con tu PDF o documento -->
+						<a class="btn-link" href="#" target="_blank" rel="noopener">
+							Ver ficha técnica →
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-book"></i></div>
+						<h5>SDD (documentación técnica)</h5>
+						<p>Especificación de diseño: arquitectura, API, modelos de datos y estrategia de pruebas.</p>
+						<a class="btn-link" href="https://github.com/Gergash/ingeleanh/tree/master/c2-blockchain/docs/sdd" target="_blank" rel="noopener">
+							Abrir docs/sdd →
+						</a>
+					</div>
+				</div>
+				<div class="col-lg-6 mb-4">
+					<div class="resource-card">
+						<div class="icon-wrap"><i class="ti-pulse"></i></div>
+						<h5>Contrato C2Registry (Amoy)</h5>
+						<p>Registry on-chain desplegado en Polygon Amoy testnet.</p>
+						<a class="btn-link" href="https://amoy.polygonscan.com/address/0x629238eD79c23267fe502AAd81E5AEfee3908750" target="_blank" rel="noopener">
+							Ver en Polygonscan →
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
 
-            <footer class="footer mt-5 border-top">
-                <div class="row align-items-center justify-content-center">
-                    </div>
-                </div> 
-            </footer>
-        </div>
-    </section>
-	
-	<!-- core  -->
-    <script src="vendors/jquery/jquery-3.4.1.js"></script>
-    <script src="vendors/bootstrap/bootstrap.bundle.js"></script>
+	<footer class="footer border-top py-4">
+		<div class="container text-center">
+			<p class="footer-note mb-1">
+				<strong>Quantum Minds</strong> · C2 Blockchain-Blindado · Hackathon Aligo Defensores Informáticos
+			</p>
+			<p class="footer-note">
+				Laboratorio autorizado · Polygon Amoy testnet · Sin valor real en blockchain
+			</p>
+		</div>
+	</footer>
 
-    <!-- bootstrap 3 affix -->
+	<script src="vendors/jquery/jquery-3.4.1.js"></script>
+	<script src="vendors/bootstrap/bootstrap.bundle.js"></script>
 	<script src="vendors/bootstrap/bootstrap.affix.js"></script>
-    
-    <!-- Owl carousel  -->
-    <script src="vendors/owl-carousel/js/owl.carousel.js"></script>
-
-
-    <!-- Ollie js -->
-    <script src="js/Ollie.js"></script>
-
+	<script src="vendors/owl-carousel/js/owl.carousel.js"></script>
+	<script src="js/Ollie.js"></script>
 </body>
 </html>
