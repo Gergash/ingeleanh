@@ -76,9 +76,11 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/v1/devices/{deviceID}/state", s.auth(s.handleDeviceState))
 	r.Get("/api/v1/chain/status", s.auth(s.handleChainStatus))
 	r.Get("/api/v1/portal/info", s.handlePortalInfo)
+	r.Get("/api/v1/platforms", s.auth(s.handlePlatforms))
 	if s.cfg.DemoMode {
 		r.Post("/api/v1/demo/seed", s.auth(s.handleDemoSeed))
 		r.Post("/api/v1/demo/replay-access", s.auth(s.handleDemoReplayAccess))
+		r.Post("/api/v1/demo/three-layer", s.auth(s.handleDemoThreeLayer))
 	}
 	r.Get("/api/v1/ws/agent", s.handleWSAgent)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {

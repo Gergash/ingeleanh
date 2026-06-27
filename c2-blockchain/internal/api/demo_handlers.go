@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -47,6 +48,83 @@ func (s *Server) handleDemoReplayAccess(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "event": ev})
+}
+
+// handleDemoThreeLayer runs DEMO-011: IoT event → C2 agents → blockchain config (one guided flow).
+func (s *Server) handleDemoThreeLayer(w http.ResponseWriter, r *http.Request) {
+	if !s.cfg.DemoMode {
+		writeError(w, http.StatusForbidden, "DEMO_DISABLED")
+		return
+	}
+	ctx := r.Context()
+	steps := make([]map[string]interface{}, 0, 3)
+
+	ev, err := s.ReplayLaurelesAccess(ctx)
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "CSV_NOT_LOADED")
+		return
+	}
+	steps = append(steps, map[string]interface{}{
+		"layer":   "iot",
+		"step":    1,
+		"title":   "Evento residencial (Laureles CSV)",
+		"status":  "ok",
+		"detail":  ev["payload_summary"],
+		"device":  ev["device_id"],
+	})
+
+	agents, _ := s.db.ListAgents(ctx)
+	active := 0
+	var sampleHost string
+	for _, a := range agents {
+		if a.Status == "active" {
+			active++
+			if sampleHost == "" {
+				sampleHost = a.Hostname
+			}
+		}
+	}
+	steps = append(steps, map[string]interface{}{
+		"layer":  "c2",
+		"step":   2,
+		"title":  "Canal C2 (agentes + beacon)",
+		"status": "ok",
+		"detail": fmt.Sprintf("%d agentes activos; ejemplo host %s", active, sampleHost),
+	})
+
+	chainStatus := s.chain.Status()
+	if s.cfg.RPCURL != "" && s.cfg.RegistryAddress != "" {
+		if cfg, err := s.chain.GetConfig(ctx); err == nil {
+			chainStatus["config_version"] = cfg.Version
+			chainStatus["beacon_interval_sec"] = cfg.BeaconIntervalSec
+			chainStatus["endpoint_hash"] = cfg.EndpointHash
+		}
+	}
+	steps = append(steps, map[string]interface{}{
+		"layer":   "blockchain",
+		"step":    3,
+		"title":   "Registry Polygon Amoy (getConfig)",
+		"status":  "ok",
+		"detail":  fmt.Sprintf("config v%v beacon %vs", chainStatus["config_version"], chainStatus["beacon_interval_sec"]),
+		"hash":    chainStatus["endpoint_hash"],
+		"network": chainStatus["network"],
+	})
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status":    "ok",
+		"demo_id":   "DEMO-011",
+		"steps":     steps,
+		"chain":     chainStatus,
+		"narrative": "IoT simulado → auditoría C2 → verificación on-chain sin URL en claro",
+	})
+}
+
+func (s *Server) handlePlatforms(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"supported": []string{"linux-amd64", "linux-arm64", "windows-amd64"},
+		"build":     "scripts/build-agents.sh o scripts/build-agents.ps1 → dist/",
+		"note":      "MVP-07: mismo código Go; executor adapta shell por GOOS",
+	})
 }
 
 func (s *Server) handlePortalInfo(w http.ResponseWriter, r *http.Request) {

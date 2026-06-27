@@ -42,10 +42,7 @@ func Whoami(ctx context.Context) (Result, error) {
 }
 
 func CurrentOS() string {
-	if runtime.GOOS == "windows" {
-		return "windows-amd64"
-	}
-	return "linux-amd64"
+	return runtime.GOOS + "-" + runtime.GOARCH
 }
 
 func Hostname() string {

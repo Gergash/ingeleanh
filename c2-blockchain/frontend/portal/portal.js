@@ -268,6 +268,22 @@ async function lockCommand(action) {
   }
 }
 
+async function runThreeLayer() {
+  const out = document.getElementById('task-result');
+  out.textContent = 'Ejecutando DEMO-011 (IoT → C2 → blockchain)…';
+  try {
+    const res = await api('/demo/three-layer', { method: 'POST', body: '{}' });
+    const lines = (res.steps || []).map(s =>
+      `[${s.layer}] ${s.title}: ${s.detail || ''}`
+    );
+    out.textContent = res.narrative + '\n\n' + lines.join('\n') +
+      '\n\nchain: ' + JSON.stringify(res.chain, null, 2);
+    await refreshAll(true);
+  } catch (e) {
+    out.textContent = 'DEMO-011: ' + e.message;
+  }
+}
+
 async function replayAccess() {
   try {
     const res = await api('/demo/replay-access', { method: 'POST', body: '{}' });

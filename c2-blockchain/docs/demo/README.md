@@ -19,6 +19,7 @@ Documentación operativa para **demo en vivo** y **video 3–7 min**.
 | [GUION_DEMO_VIVO.md](./GUION_DEMO_VIVO.md) | Paso a paso ante jurado (15–20 min) |
 | [GUION_VIDEO.md](./GUION_VIDEO.md) | Guion video 3–7 min con tiempos |
 | [CHECKLIST_ENTREGABLES.md](./CHECKLIST_ENTREGABLES.md) | MIN-005: repo, docs, video, demo |
+| [FAILOVER_DEMO.md](./FAILOVER_DEMO.md) | MVP-05 failover + MVP-07 multi-OS + DEMO-011 |
 | [CLOUDFLARE_TUNNEL.md](./CLOUDFLARE_TUNNEL.md) | Publicar portal para jurados (HTTPS) |
 
 ## Portal operador (UI producto)
@@ -55,7 +56,7 @@ Guion detallado de pruebas: [README del proyecto](../README.md#prueba-de-lab--gu
 | DEMO-008 | ⚠️ Opcional | `iot_command` unlock |
 | DEMO-009 | ✅ | Narrativa camuflaje + hash on-chain |
 | DEMO-010 | ✅ | Dashboard agentes + chain footer |
-| DEMO-011 | ⚠️ Stretch | IoT + chain en un flujo |
+| DEMO-011 | ✅ | Botón portal **Flujo 3 capas** + `POST /demo/three-layer` |
 
 ## Referencias SDD
 

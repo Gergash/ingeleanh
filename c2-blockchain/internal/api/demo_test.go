@@ -25,5 +25,5 @@ func TestSeedDemoData(t *testing.T) {
 	require.NoError(t, srv.SeedDemoData(context.Background()))
 	devs, err := db.ListIoTDevices(context.Background())
 	require.NoError(t, err)
-	require.GreaterOrEqual(t, len(devs), 3)
+	require.GreaterOrEqual(t, len(devs), 4)
 }

