@@ -76,6 +76,11 @@ func (s *Server) Router() http.Handler {
 	r.Get("/api/v1/devices/{deviceID}/state", s.auth(s.handleDeviceState))
 	r.Get("/api/v1/chain/status", s.auth(s.handleChainStatus))
 	r.Get("/api/v1/portal/info", s.handlePortalInfo)
+	r.Get("/api/v1/cir/info", s.handleCIRInfo)
+	r.Get("/api/v1/cir/summary", s.auth(s.handleCIRSummary))
+	r.Get("/api/v1/cir/alerts", s.auth(s.handleCIRAlerts))
+	r.Get("/api/v1/cir/pulse", s.auth(s.handleCIRPulse))
+	r.Post("/api/v1/cir/simulate-attack", s.handleCIRSimulateAttack)
 	r.Get("/api/v1/platforms", s.auth(s.handlePlatforms))
 	if s.cfg.DemoMode {
 		r.Post("/api/v1/demo/seed", s.auth(s.handleDemoSeed))

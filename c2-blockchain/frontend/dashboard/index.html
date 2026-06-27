@@ -1,108 +1,235 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>C2 Blockchain-Blindado — Dashboard</title>
-  <style>
-    body { font-family: system-ui, sans-serif; margin: 1rem; background: #0f1419; color: #e6edf3; }
-    h1 { font-size: 1.2rem; }
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
-    section { background: #161b22; padding: 1rem; border-radius: 8px; min-height: 120px; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { padding: 0.35rem; border-bottom: 1px solid #30363d; text-align: left; }
-    .chain { margin-top: 1rem; padding: 0.75rem; background: #21262d; border-radius: 6px; }
-    .error { color: #f85149; font-size: 0.85rem; margin: 0.5rem 0; }
-    .hint { color: #8b949e; font-size: 0.8rem; }
-    button { background: #238636; color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 4px; cursor: pointer; margin-right: 0.5rem; }
-    button.secondary { background: #30363d; }
-    input { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 0.35rem; width: 100%; margin-top: 0.25rem; }
-    label { font-size: 0.8rem; color: #8b949e; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIR — Centro de Inteligencia Residencial · C2</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<link rel="stylesheet" href="cir.css">
 </head>
 <body>
-  <h1>C2 Blockchain-Blindado — Panel de estado</h1>
-  <div style="margin-bottom: 1rem;">
-    <label for="jwt">JWT (POST /api/v1/operator/login)</label>
-    <input id="jwt" type="text" placeholder="Pega el token aquí" />
-    <div style="margin-top: 0.5rem;">
-      <button onclick="saveToken()">Guardar token</button>
-      <button class="secondary" onclick="refresh()">Actualizar</button>
-      <button class="secondary" onclick="clearToken()">Limpiar token</button>
+<canvas id="bgCanvas"></canvas>
+<div class="app">
+
+<div class="topbar">
+  <div class="tb-left">
+    <div class="logo">CIR</div>
+    <div>
+      <div class="tb-title">Centro de Inteligencia Residencial</div>
+      <div class="tb-sub">C2 Blockchain-Blindado · Polygon Amoy · v1.0 MVP</div>
     </div>
-    <div id="auth-error" class="error" style="display:none"></div>
   </div>
-  <div class="grid">
-    <section><h2>Agentes</h2><div id="agents" class="hint">Sin datos</div></section>
-    <section><h2>Tareas</h2><div id="tasks" class="hint">Crear con POST /api/v1/tasks; consultar con GET /api/v1/tasks/{id}</div></section>
-    <section><h2>Eventos IoT</h2><div id="events" class="hint">Sin eventos</div></section>
+  <div class="tb-right">
+    <div class="live-badge"><div class="live-dot"></div>C2 en línea</div>
+    <div class="tb-stat"><i class="ti ti-database" style="color:var(--blue);font-size:12px"></i><span id="tbRecords">119.186 registros validados</span></div>
+    <div class="tb-stat"><i class="ti ti-clock" style="font-size:12px"></i><span id="tbTime"></span></div>
+    <button class="attack-btn" onclick="simulateAttack()"><i class="ti ti-bug"></i>Simular ataque</button>
+    <a class="attack-btn" href="/portal/" style="text-decoration:none;margin-left:8px"><i class="ti ti-layout-dashboard"></i>Portal C2</a>
   </div>
-  <div class="chain" id="chain">Chain: sin conexión on-chain (lab local)</div>
-  <script>
-    function getToken() {
-      const input = document.getElementById('jwt').value.trim();
-      if (input) return input;
-      return (localStorage.getItem('c2_jwt') || '').trim();
-    }
-    function saveToken() {
-      const t = document.getElementById('jwt').value.trim();
-      if (t) localStorage.setItem('c2_jwt', t);
-      refresh();
-    }
-    function clearToken() {
-      localStorage.removeItem('c2_jwt');
-      document.getElementById('jwt').value = '';
-      refresh();
-    }
-    async function api(path) {
-      const token = getToken();
-      if (!token) {
-        throw new Error('Sin JWT. Haz login y pega el token.');
-      }
-      const r = await fetch('/api/v1' + path, { headers: { Authorization: 'Bearer ' + token } });
-      const data = await r.json();
-      if (!r.ok) {
-        throw new Error(data.error_code || r.statusText);
-      }
-      return data;
-    }
-    async function refresh() {
-      const errEl = document.getElementById('auth-error');
-      errEl.style.display = 'none';
-      const saved = localStorage.getItem('c2_jwt');
-      if (saved && !document.getElementById('jwt').value) {
-        document.getElementById('jwt').value = saved;
-      }
-      try {
-        const agents = await api('/agents');
-        const rows = (agents.agents || []);
-        document.getElementById('agents').innerHTML = rows.length
-          ? '<table><tr><th>ID</th><th>OS</th><th>Status</th><th>Last beacon</th></tr>' +
-            rows.map(a => `<tr><td>${a.agent_id}</td><td>${a.os}</td><td>${a.status}</td><td>${a.last_beacon || '—'}</td></tr>`).join('') +
-            '</table>'
-          : '<span class="hint">No hay agentes registrados</span>';
+</div>
 
-        const events = await api('/events?limit=20');
-        const evs = (events.events || []);
-        document.getElementById('events').innerHTML = evs.length
-          ? '<table><tr><th>Tipo</th><th>Resumen</th></tr>' +
-            evs.map(e => `<tr><td>${e.event_type || ''}</td><td>${e.payload_summary || JSON.stringify(e)}</td></tr>`).join('') +
-            '</table>'
-          : '<span class="hint">Sin eventos IoT aún</span>';
+<div class="kpi-row">
+  <div class="kpi" style="--kpi-accent:var(--blue)">
+    <div class="kpi-glow" style="background:var(--blue)"></div>
+    <div class="kpi-label">Eventos este mes</div>
+    <div class="kpi-val" id="kpiEventos">119.186</div>
+    <div class="kpi-sub kpi-up"><i class="ti ti-trending-up" style="font-size:11px"></i>+8.3% vs mes anterior</div>
+  </div>
+  <div class="kpi" style="--kpi-accent:var(--green)">
+    <div class="kpi-glow" style="background:var(--green)"></div>
+    <div class="kpi-label">Nodos activos</div>
+    <div class="kpi-val" id="kpiNodos">3 / 3</div>
+    <div class="kpi-sub kpi-up"><i class="ti ti-circle-check" style="font-size:11px"></i>Todos operativos</div>
+  </div>
+  <div class="kpi" style="--kpi-accent:var(--red)">
+    <div class="kpi-glow" style="background:var(--red)"></div>
+    <div class="kpi-label">Alertas C2 (24h)</div>
+    <div class="kpi-val kpi-danger" id="kpiAlertas">7</div>
+    <div class="kpi-sub kpi-danger"><i class="ti ti-alert-triangle" style="font-size:11px"></i>2 críticas sin resolver</div>
+  </div>
+  <div class="kpi" style="--kpi-accent:var(--amber)">
+    <div class="kpi-glow" style="background:var(--amber)"></div>
+    <div class="kpi-label">Score seguridad</div>
+    <div class="kpi-val" id="kpiScore">94.2</div>
+    <div class="kpi-sub kpi-warn"><i class="ti ti-minus" style="font-size:11px"></i>−1.4 pts vs ayer</div>
+  </div>
+</div>
 
-        const chain = await api('/chain/status');
-        const ver = chain.config_version ?? 0;
-        const block = chain.last_indexed_block ?? 0;
-        const chainId = chain.chain_id ?? '—';
-        document.getElementById('chain').textContent =
-          `Chain: v${ver} | Block: ${block} | Red: ${chain.network || 'local'} (${chainId}) | Registry: ${chain.contract_address || 'no desplegado'}`;
-      } catch (e) {
-        errEl.textContent = 'Error: ' + e.message + ' — Obtén token: curl -s http://localhost:8443/api/v1/operator/login -d \'{"username":"operator","password":"lab"}\'';
-        errEl.style.display = 'block';
-      }
-    }
-    const saved = localStorage.getItem('c2_jwt');
-    if (saved) document.getElementById('jwt').value = saved;
-    refresh();
-  </script>
+<div class="tabs">
+  <button class="tab active" onclick="sw('arch',this)"><i class="ti ti-topology-star"></i>Arquitectura de nodos</button>
+  <button class="tab" onclick="sw('predict',this)"><i class="ti ti-brain"></i>Motor predictivo</button>
+  <button class="tab" onclick="sw('iot',this)"><i class="ti ti-cpu"></i>Pulso IoT</button>
+  <button class="tab" onclick="sw('cyber',this)"><i class="ti ti-shield-exclamation"></i>Ciberseguridad</button>
+  <button class="tab" onclick="sw('etl',this)"><i class="ti ti-database"></i>Pipeline ETL</button>
+</div>
+
+<div id="p-arch" class="panel active">
+  <div class="g14">
+    <div>
+      <div class="node-stack">
+        <div class="node-item n3">
+          <div class="node-tier">Nodo 3 — C2 Central</div>
+          <div class="node-name">Servidor C2 · Command &amp; Control</div>
+          <div class="node-desc">Consolida todos los agregados · Mapa en vivo · Feed de alertas · Motor IA predictiva</div>
+          <div class="node-tags">
+            <span class="ntag nt-v"><i class="ti ti-shield-lock" style="font-size:9px;margin-right:2px"></i>AES-GCM</span>
+            <span class="ntag nt-v"><i class="ti ti-link" style="font-size:9px;margin-right:2px"></i>Polygon Amoy</span>
+            <span class="ntag nt-v"><i class="ti ti-brain" style="font-size:9px;margin-right:2px"></i>IA predictiva</span>
+          </div>
+        </div>
+        <div class="node-conn"><div class="nc-line"><i class="ti ti-arrow-down" style="font-size:9px"></i>ECDSA/ECDH · cifrado en tránsito</div></div>
+        <div class="node-item n2">
+          <div class="node-tier">Nodo 2 — Agregador</div>
+          <div class="node-name">Operador / Empresa de vigilancia</div>
+          <div class="node-desc">Agrupa nodos del mismo operador · Permisos RLS por cliente · Normaliza métricas por tamaño</div>
+          <div class="node-tags">
+            <span class="ntag nt-b"><i class="ti ti-lock" style="font-size:9px;margin-right:2px"></i>RLS activo</span>
+            <span class="ntag nt-b"><i class="ti ti-building" style="font-size:9px;margin-right:2px"></i>Multi-cliente</span>
+          </div>
+        </div>
+        <div class="node-conn"><div class="nc-line"><i class="ti ti-arrow-down" style="font-size:9px"></i>API REST / WebSocket autenticada</div></div>
+        <div class="node-item n1">
+          <div class="node-tier">Nodo 1 — Fuente</div>
+          <div class="node-name">Conjunto · Peaje · Sede pública</div>
+          <div class="node-desc">Sistema de acceso propio CIR · Conserva su histórico · Sensores IoT autenticados</div>
+          <div class="node-tags">
+            <span class="ntag nt-c"><i class="ti ti-cpu" style="font-size:9px;margin-right:2px"></i>IoT gateway</span>
+            <span class="ntag nt-c"><i class="ti ti-eye-off" style="font-size:9px;margin-right:2px"></i>Anonimización</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="margin-bottom:0;padding:12px">
+        <div class="card-title"><div class="ct-accent" style="background:var(--cyan)"></div><i class="ti ti-map-pin" style="color:var(--cyan)"></i>Mapa en vivo — red de nodos C2</div>
+        <div class="net-wrap"><canvas id="netCanvas"></canvas></div>
+      </div>
+      <div class="card" style="margin-bottom:0">
+        <div class="card-title"><div class="ct-accent" style="background:var(--blue)"></div><i class="ti ti-users" style="color:var(--blue)"></i>Actores conectados al C2</div>
+        <div class="actor-grid">
+          <div class="actor"><div class="actor-ico" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2)"><i class="ti ti-building-community" style="color:var(--cyan)"></i></div><div><div class="actor-name">Residenciales</div><div class="actor-sub">Conjuntos · Torres · PH</div></div></div>
+          <div class="actor"><div class="actor-ico" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2)"><i class="ti ti-shield" style="color:var(--amber)"></i></div><div><div class="actor-name">Empresas de seguridad</div><div class="actor-sub">Vigilancia privada</div></div></div>
+          <div class="actor"><div class="actor-ico" style="background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.2)"><i class="ti ti-road" style="color:var(--blue)"></i></div><div><div class="actor-name">Peajes / Concesiones</div><div class="actor-sub">Vías nacionales</div></div></div>
+          <div class="actor"><div class="actor-ico" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2)"><i class="ti ti-building-bank" style="color:var(--violet)"></i></div><div><div class="actor-name">Entes públicos</div><div class="actor-sub">Ciudad · Municipio</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="ct-accent" style="background:var(--red)"></div><i class="ti ti-bell" style="color:var(--red)"></i>Feed de alertas — tiempo real</div>
+    <div class="alert-list" id="alertFeed"></div>
+  </div>
+</div>
+
+<div id="p-predict" class="panel">
+  <div class="phase-row">
+    <div class="phase"><div class="phase-n">01</div><div class="phase-t">Línea base por nodo</div><div class="phase-d">Cada conjunto o vía aprende su patrón normal de movimiento hora por hora. Modela ciclos semanales y estacionales.</div></div>
+    <div class="phase"><div class="phase-n">02</div><div class="phase-t">Detección de desviación</div><div class="phase-d">Volumen atípico, vehículo recurrente o cruce de horario que se aparte de la norma dispara señal al agregador.</div></div>
+    <div class="phase"><div class="phase-n">03</div><div class="phase-t">Correlación entre nodos</div><div class="phase-d">La IA verifica si señales similares aparecen en nodos vecinos en la misma ventana de tiempo.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="ct-accent" style="background:var(--violet)"></div><i class="ti ti-brain" style="color:var(--violet)"></i>Análisis multidimensional — C2 anticipa el riesgo</div>
+    <div class="analysis-grid">
+      <div class="abox ab-desc"><div class="atype">Descriptiva</div><div class="atitle">¿Qué ocurrió?</div><div class="abody" id="analysisDesc">119.186 eventos en 30 días. 73% residentes · 18% visitantes · 9% domicilios.</div></div>
+      <div class="abox ab-diag"><div class="atype">Diagnóstica</div><div class="atitle">¿Por qué ocurrió?</div><div class="abody">Aumento del 40% en accesos del miércoles correlaciona con evento Torre 5 (permiso temporal a las 07:45).</div></div>
+      <div class="abox ab-pred"><div class="atype">Predictiva</div><div class="atitle">¿Qué va a ocurrir?</div><div class="abody">Probabilidad 78% de incremento de tráfico el viernes 17:00–19:00. T06·39 aparece cada 72 h ± 4 h.</div></div>
+      <div class="abox ab-pres"><div class="atype">Prescriptiva</div><div class="atitle">¿Qué hacer?</div><div class="abody">Activar refuerzo Torre 1 el viernes desde las 16:45. Validación adicional para T06·39. Notificar al agregador.</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--blue)"></div><i class="ti ti-chart-bar" style="color:var(--blue)"></i>Accesos por hora — línea base vs hoy</div><div class="chart-wrap" style="height:200px"><canvas id="baselineChart"></canvas></div></div>
+    <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--violet)"></div><i class="ti ti-chart-donut" style="color:var(--violet)"></i>Distribución tipo de usuario</div><div class="chart-wrap" style="height:200px"><canvas id="typeChart"></canvas></div></div>
+  </div>
+</div>
+
+<div id="p-iot" class="panel">
+  <div class="g2">
+    <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--cyan)"></div><i class="ti ti-cpu" style="color:var(--cyan)"></i>Sensores activos por tipo</div><div class="chart-wrap" style="height:190px"><canvas id="sensorChart"></canvas></div></div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title"><div class="ct-accent" style="background:var(--violet)"></div><i class="ti ti-lock" style="color:var(--violet)"></i>Arquitectura de privacidad</div>
+      <div class="cstack">
+        <div class="citem"><div class="cico"><i class="ti ti-eye-off"></i></div><div><div class="cname">Anonimización en el origen</div><div class="cdetail">Nombre, cédula y placas → código interno (T06·39) antes de transmisión</div></div></div>
+        <div class="citem"><div class="cico"><i class="ti ti-lock"></i></div><div><div class="cname">Cifrado en tránsito y en reposo</div><div class="cdetail">AES-GCM entre nodos · llaves separadas por cliente</div></div></div>
+        <div class="citem"><div class="cico"><i class="ti ti-table-options"></i></div><div><div class="cname">Permisos RLS</div><div class="cdetail">Row Level Security: cada operador solo ve sus propios nodos</div></div></div>
+        <div class="citem"><div class="cico"><i class="ti ti-history"></i></div><div><div class="cname">Trazabilidad de acceso</div><div class="cdetail">Cada consulta registrada en blockchain: quién vio qué y cuándo</div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="ct-accent" style="background:var(--cyan)"></div><i class="ti ti-activity" style="color:var(--cyan)"></i>Anatomía del pulso IoT — últimos eventos</div>
+    <div style="overflow-x:auto">
+      <table class="pulse-table">
+        <thead><tr><th>Fecha / hora</th><th>Torre / Apt</th><th>Tipo usuario</th><th>Identidad / Placa / Rostro</th><th>Estado</th></tr></thead>
+        <tbody id="pulseBody"></tbody>
+      </table>
+    </div>
+    <div class="rls-grid">
+      <div class="rls-box"><div class="rls-head" style="color:var(--cyan)"><i class="ti ti-building-community" style="font-size:13px"></i>Administración</div><div class="rls-perm"><span class="p-ok">✓</span> Accesos propios · histórico<br><span class="p-ok">✓</span> Identidades anonimizadas<br><span class="p-no">✗</span> Otros conjuntos</div></div>
+      <div class="rls-box"><div class="rls-head" style="color:var(--blue)"><i class="ti ti-shield" style="font-size:13px"></i>Empresa vigilancia</div><div class="rls-perm"><span class="p-ok">✓</span> Nodos propios · alertas<br><span class="p-ok">✓</span> Métricas agregadas<br><span class="p-no">✗</span> Identidades individuales</div></div>
+      <div class="rls-box"><div class="rls-head" style="color:var(--violet)"><i class="ti ti-circuit-cell" style="font-size:13px"></i>C2 Central</div><div class="rls-perm"><span class="p-ok">✓</span> Métricas anónimas globales<br><span class="p-ok">✓</span> Patrones y correlaciones<br><span class="p-no">✗</span> Datos individuales</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="p-cyber" class="panel">
+  <div class="g2">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title"><div class="ct-accent" style="background:var(--red)"></div><i class="ti ti-bug" style="color:var(--red)"></i>Simulación de ataque — Agente vs C2</div>
+      <div class="atk-list">
+        <div class="atk"><div class="atk-n">1</div><div><div class="atk-phase">Reconocimiento — OSINT</div><div class="atk-desc">El agente escanea puertos expuestos del servidor C2 y recopila información pública del dominio CIR.</div><span class="atk-tag"><i class="ti ti-search" style="font-size:9px;margin-right:2px"></i>Nmap · Shodan</span></div></div>
+        <div class="atk"><div class="atk-n">2</div><div><div class="atk-phase">Phishing dirigido — spear phishing</div><div class="atk-desc">Email falsificado al administrador del nodo fuente simulando ser soporte CIR. Intento de obtener credenciales API.</div><span class="atk-tag"><i class="ti ti-mail" style="font-size:9px;margin-right:2px"></i>Phishing · credential harvest</span></div></div>
+        <div class="atk"><div class="atk-n">3</div><div><div class="atk-phase">Comando al C2 — C2 injection</div><div class="atk-desc">Con credencial comprometida, el agente inyecta comandos en /api/v1/events intentando exfiltrar histórico.</div><span class="atk-tag"><i class="ti ti-terminal" style="font-size:9px;margin-right:2px"></i>API exploit · data exfiltration</span></div></div>
+        <div class="atk" id="step4" style="display:none"><div class="atk-n ok">✓</div><div><div class="atk-phase ok">Defensa activada — bloqueo C2</div><div class="atk-desc">ECDSA rechaza token inválido. Blockchain registra intento. Motor IA eleva alerta. Bloqueado en 340 ms.</div><span class="atk-tag ok"><i class="ti ti-shield-check" style="font-size:9px;margin-right:2px"></i>Bloqueado · registrado · trazado</span></div></div>
+      </div>
+      <button class="run-btn rb-red" id="simBtn" onclick="runSim()"><i class="ti ti-player-play"></i>Ejecutar simulación completa</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--red)"></div><i class="ti ti-radar" style="color:var(--red)"></i>Patrones de vulnerabilidad</div><div class="chart-wrap" style="height:200px"><canvas id="vulnChart"></canvas></div></div>
+      <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--amber)"></div><i class="ti ti-chart-line" style="color:var(--amber)"></i>Eventos de seguridad — 30 días</div><div class="chart-wrap" style="height:140px"><canvas id="secChart"></canvas></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="p-etl" class="panel">
+  <div class="card">
+    <div class="card-title"><div class="ct-accent" style="background:var(--cyan)"></div><i class="ti ti-arrows-right" style="color:var(--cyan)"></i>Pipeline ETL — extracción a acción</div>
+    <div class="etl-flow">
+      <div class="etl-s"><div class="etl-ico"><i class="ti ti-folder-open" style="color:var(--blue)"></i></div><div class="etl-label">Extracción</div><div class="etl-sub">Carpetas y bases descentralizadas</div></div>
+      <div class="etl-arr"><i class="ti ti-arrow-right"></i></div>
+      <div class="etl-s"><div class="etl-ico"><i class="ti ti-filter" style="color:var(--violet)"></i></div><div class="etl-label">Transformación</div><div class="etl-sub">Filtro de privacidad en el origen</div></div>
+      <div class="etl-arr"><i class="ti ti-arrow-right"></i></div>
+      <div class="etl-s"><div class="etl-ico"><i class="ti ti-database" style="color:var(--cyan)"></i></div><div class="etl-label">Carga</div><div class="etl-sub">BD estandarizada · histórico vs vivo</div></div>
+      <div class="etl-arr"><i class="ti ti-arrow-right"></i></div>
+      <div class="etl-s"><div class="etl-ico"><i class="ti ti-layout-dashboard" style="color:var(--green)"></i></div><div class="etl-label">Orquestación</div><div class="etl-sub">Paneles de control ejecutables</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><div class="ct-accent" style="background:var(--violet)"></div><i class="ti ti-road" style="color:var(--violet)"></i>Roadmap de fases — CIR → Smart City</div>
+    <div class="roadmap">
+      <div class="rm-phase active"><div class="rm-n">F1</div><div class="rm-t">Origen · MVP</div><div class="rm-d">1 nodo real — Laureles Campestre · <span id="rmRecords">119.186</span> registros validados</div><div><span class="rm-badge">Validado ✓</span></div></div>
+      <div class="rm-phase"><div class="rm-n">F2</div><div class="rm-t">Producto · SaaS</div><div class="rm-d">Plataforma B2B para administración y vigilancia · Primeros nodos agregadores</div></div>
+      <div class="rm-phase"><div class="rm-n">F3</div><div class="rm-t">C2 · Smart City</div><div class="rm-d">Integración con peajes y ecosistemas urbanos · IA predictiva en producción</div></div>
+      <div class="rm-phase"><div class="rm-n">F4</div><div class="rm-t">Expansión</div><div class="rm-d">Estándar C2 a nivel ciudad y nacional en Colombia</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card" style="margin-bottom:0"><div class="card-title"><div class="ct-accent" style="background:var(--blue)"></div><i class="ti ti-chart-bar" style="color:var(--blue)"></i>Reporte analítico — Excel / Power Query</div><div class="chart-wrap" style="height:200px"><canvas id="reportChart"></canvas></div></div>
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title"><div class="ct-accent" style="background:var(--green)"></div><i class="ti ti-users" style="color:var(--green)"></i>Valor multidimensional del ecosistema CIR</div>
+      <div class="actor-grid">
+        <div class="actor"><div class="actor-ico" style="background:rgba(34,211,238,0.1);border:1px solid rgba(34,211,238,0.2)"><i class="ti ti-building-community" style="color:var(--cyan)"></i></div><div><div class="actor-name">Administración</div><div class="actor-sub">Control y transparencia</div></div></div>
+        <div class="actor"><div class="actor-ico" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.2)"><i class="ti ti-shield" style="color:var(--red)"></i></div><div><div class="actor-name">Seguridad</div><div class="actor-sub">Vigilancia inteligente</div></div></div>
+        <div class="actor"><div class="actor-ico" style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2)"><i class="ti ti-crane" style="color:var(--amber)"></i></div><div><div class="actor-name">Constructoras</div><div class="actor-sub">Datos de proyectos</div></div></div>
+        <div class="actor"><div class="actor-ico" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2)"><i class="ti ti-building-arch" style="color:var(--violet)"></i></div><div><div class="actor-name">Ciudades / Entidades</div><div class="actor-sub">Smart city · gobernanza</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+<script>window.C2_API_BASE = window.C2_API_BASE || '';</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="cir-charts.js"></script>
+<script src="cir-api.js"></script>
 </body>
 </html>

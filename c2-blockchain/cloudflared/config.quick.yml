@@ -1,0 +1,7 @@
+# Quick Tunnel — C2 lab (sin dominio propio)
+# Uso: scripts/run-cloudflare-tunnel.sh  o  scripts/run-cloudflare-tunnel.ps1
+# Ver docs/demo/CLOUDFLARE_TUNNEL.md
+
+loglevel: info
+transport-loglevel: error
+metrics: 127.0.0.1:0

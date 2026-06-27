@@ -43,7 +43,24 @@ Windows (winget):
 winget install Cloudflare.cloudflared
 ```
 
+En Git Bash, si `cloudflared` no está en PATH:
+
+```bash
+"/c/Program Files (x86)/cloudflared/cloudflared.exe" --version
+```
+
 O descarga desde: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+## 2b. Quick Tunnel (sin dominio — hackathon)
+
+Con el server en `:8443`:
+
+```bash
+cd ingeleanh/c2-blockchain
+bash scripts/run-cloudflare-tunnel.sh
+```
+
+Abre la URL impresa + `/portal/` (login `operator` / `lab`).
 
 ## 3. Autenticar cloudflared
 
@@ -127,10 +144,31 @@ Incluir en README y video:
 Cloudflare ofrece URLs temporales con **Quick Tunnel** (sin cuenta DNS):
 
 ```bash
+cd ingeleanh/c2-blockchain
+bash scripts/run-cloudflare-tunnel.sh
+```
+
+O manualmente:
+
+```bash
 cloudflared tunnel --url http://localhost:8443
 ```
 
 Genera una URL `https://xxxx.trycloudflare.com` — útil para prueba rápida; la URL cambia cada vez.
+
+### Script recomendado (menos advertencias en consola)
+
+`scripts/run-cloudflare-tunnel.sh` (Git Bash) o `scripts/run-cloudflare-tunnel.ps1` (PowerShell) usan:
+
+| Advertencia original | Cómo se mitiga |
+|---------------------|----------------|
+| `No file config.yml` | `--config cloudflared/config.quick.yml` |
+| `system root certificate pool` (Windows) | `--origin-ca-pool` → CA de Git (`ca-bundle.crt`) |
+| ICMP proxy / metrics `127.0.0.1:20241` | `--metrics 127.0.0.1:0` + `--management-diagnostics=false` |
+| Ruido de prechecks / transporte QUIC | `--no-prechecks` + `--transport-loglevel error` |
+| `account-less Tunnels` / sin uptime guarantee | **No eliminable** en Quick Tunnel sin dominio; mensaje informativo de Cloudflare (1 línea al arrancar). Tunnel nombrado + dominio: sección 3–7. |
+| ICMP proxy (líneas INF) | Sin flag de desactivación en Quick Tunnel; ignorar en demo |
+| `metrics server` en puerto aleatorio | Mitigado parcialmente (`--metrics 127.0.0.1:0`); cloudflared puede asignar puerto local; no expone tráfico público |
 
 ## Troubleshooting
 
